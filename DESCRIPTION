@@ -1,0 +1,9 @@
+Package: CCSRA
+Type: Package
+Title: Catch-curve stock reduction analysis for assessment of data-poor fisheries with compositional data in the final year
+Version: 1.0
+Date: 2014-10-30
+Author: James Thorson
+Maintainer: James Thorson <James.Thorson@noaa.gov>
+Description: This package provides a software implementation of Catch-curve stock reduction analysis (CCSRA) using Template Model Builder (TMB) for parameter estimation
+License: What license is it under?
