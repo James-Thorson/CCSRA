@@ -5,40 +5,55 @@
 # NOTES
 #
 # 1. Catch curves
-#   - Requires that h=1 (so R is constant) and estimating a single F
+#   - Requires that h=1 (so expected R is constant) and estimating a single F
 #
 # 2. Conventional SRA
 #   - Doesn't appear to have information to update RecDevs (SE always equals SigmaR)
+#
+# 3. Simulate data
+#   - Recruits (e.g., N_at[1,1]) arise from spawning biomass in that year (i.e., N_at[,1])
+#   - Changes in effort (e.g., F[t+1]) arise from spawning biomass in the earlier year (e.g., SB[t])
+#   - Catches (e.g., C[t]) arise from removals in that year (i.e., F[t])
+#   - Cw_t -- Catch (weight) in year t
+#   - Cn_at -- Catch (numbers) in year t and age a
+#   - Dn_at -- Natural mortality (numbers) in year t and age a
+#   - Zn_at -- total mortality (numbers) in year t and age a
 #
 ##############################
 
 #######################
 # Header
 #######################
-setwd("C:/Users/James.Thorson/Desktop/Project_git/CCSRA/")
 
-# File structure
-AdmbFile = paste0(getwd(),"/inst/executables/")
+# Install package
+#install.packages("devtools")
+library("devtools")
+install_github("James-Thorson/CCSRA")
 
 # Libraries
+library(CCSRA)
 library(TMB)
 
-# Functions
-source( paste0(getwd(),"/Fn_CCRA_2014-10-30.R",sep="") )
+# File structure
+TmbFile = paste0(system.file("executables", package="CCSRA"),"/")
 
 # Date file
 Date = Sys.Date()
-  DateFile = paste(getwd(),"/",Date,"/",sep="")
+  DateFile = paste0(getwd(),"/",Date,"/")
   dir.create(DateFile)
-FigFile = paste(DateFile,"Figs/",sep="")
+FigFile = paste0(DateFile,"Figs/")
   dir.create(FigFile)
+
+# Compile model
+Version = "CCSRA_v4"   # v3: Added priors on h and M; v4: Added RecDevs
+setwd(TmbFile)
+compile( dynlib(Version) )
   
 #######################
-# Simulate data
+# Settings
 #######################
 
-# Settings
-Version = "CCSRA_v4"   # v3: Added priors on h and M; v4: Added RecDevs
+# General
 AgeMax = 20
 Nyears = 20
 Ncomp_per_year = 100
@@ -76,18 +91,13 @@ h = exp(LMLSS) / (4 + exp(LMLSS))
 SB0 = sum( R0 * exp(-M * 0:AgeMax) * W_a * Mat_a )
 SBPR0 = SB0 / R0
 
-##### Simulate data
-# Recruits (e.g., N_at[1,1]) arise from spawning biomass in that year (i.e., N_at[,1])
-# Changes in effort (e.g., F[t+1]) arise from spawning biomass in the earlier year (e.g., SB[t])
-# Catches (e.g., C[t]) arise from removals in that year (i.e., F[t])
-# Cw_t -- Catch (weight) in year t
-# Cn_at -- Catch (numbers) in year t and age a
-# Dn_at -- Natural mortality (numbers) in year t and age a
-# Zn_at -- total mortality (numbers) in year t and age a
-
 # Simulation settings
 Nrep = 10
 RandomSeed = ceiling(runif(1, min=1,max=1e6))
+
+#######################
+# Loop through simulation experiment
+#######################
 
 # Saving objects
 TimeseriesResults = array(NA, dim=c(1+Nmethods,Nrep,3,Nyears,2), dimnames=list(c("True",paste("Method=",1:Nmethods)),paste("Rep=",1:Nrep),c("ln_F_t","ln_SB_t","ln_D_t"),paste("Year=",1:Nyears),c("Est","SE")))
@@ -135,7 +145,7 @@ for(RepI in 1:Nrep){
       InputList = FormatInput_Fn(Method=Method, M_prior=c(M,0.5), h_prior=c(h,0.1), D_prior=c(0.4,0.2), SigmaR_prior=c(0.6,0.2), AgeComp_at=DataList[['AgeComp_at']], Cw_t=DataList[['Cw_t']], W_a=W_a, Mat_a=Mat_a, RecDev_biasadj=RecDev_biasadj)
       
       # Compile 
-      dyn.load( paste0(AdmbFile,dynlib(Version)) )
+      dyn.load( paste0(TmbFile,dynlib(Version)) )
       Obj <- MakeADFun(data=InputList[['Data']], parameters=InputList[['Parameters']], map=InputList[['Map']], random=InputList[['Random']], inner.control=list(maxit=100) )
       Obj$env$inner.control <- c(Obj$env$inner.control, "step.tol"=1e-12, "tol10"=1e-8, "grad.tol"=1e-12) 
       Obj$fn( Obj$par )
