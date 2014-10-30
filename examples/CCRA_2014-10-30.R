@@ -150,8 +150,13 @@ for(RepI in 1:Nrep){
       Obj$env$inner.control <- c(Obj$env$inner.control, "step.tol"=1e-12, "tol10"=1e-8, "grad.tol"=1e-12) 
       Obj$fn( Obj$par )
     
+      # Set bounds
+      Upr = rep(Inf, length(Obj$par))
+        Upr[match("ln_SigmaR",names(Obj$par))] = log(1)
+      Lwr = rep(-Inf, length(Obj$par))
+      
       # Run
-      Opt = nlminb( start=Obj$par, objective=Obj$fn, gradient=Obj$gr, control=list(trace=1, eval.max=1e4, iter.max=1e4, rel.tol=1e-14) )
+      Opt = nlminb( start=Obj$par, objective=Obj$fn, gradient=Obj$gr, upper=Upr, lower=Lwr, control=list(trace=1, eval.max=1e4, iter.max=1e4, rel.tol=1e-14) )
       Opt[["final_gradient"]] = Obj$gr( Opt$par )
       Report = Obj$report()
       Sdreport = try( sdreport(Obj) )
