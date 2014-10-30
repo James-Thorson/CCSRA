@@ -47,10 +47,9 @@ function( Method, M_prior, h_prior, D_prior, SigmaR_prior, AgeComp_at, Cw_t, W_a
     Map[["ln_SigmaR"]] = factor(NA)
     Map[["S50"]] = factor(NA)
     Map[["Sslope"]] = factor(NA)
-    Map[["ln_F_t_input"]] = factor( rep(NA,length(Parameters$ln_F_t_input)) )
   }
   if(Method=="CCSRA"){
-    Map[["ln_F_t_input"]] = factor( rep(NA,length(Parameters$ln_F_t_input)) )
+    Map[["ln_SigmaR"]] = factor(NA)
   }
   
   #Map[["SigmaR"]] = factor(NA)
