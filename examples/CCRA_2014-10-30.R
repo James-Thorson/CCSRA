@@ -187,13 +187,6 @@ for(RepI in 1:Nrep){
       } 
     }  # End fitting loop
 
-    # Possible correct non-converged models
-    if(FALSE){
-      if( all(exp(ln_F_t_hat[1:Nyears,1])<0.01) & (!is.na(ln_D_t_hat[Nyears,1]) & exp(ln_D_t_hat[Nyears,1])>1) ){
-        stop("check convergence")
-      }
-    }
-    
     # Record status results
     TimeseriesResults[paste("Method=",MethodI),RepI,'ln_F_t',,] = as.matrix(ln_F_t_hat)
     TimeseriesResults[paste("Method=",MethodI),RepI,'ln_SB_t',,] = as.matrix(ln_SB_t_hat)
@@ -227,43 +220,4 @@ for(RepI in 1:Nrep){
   dev.off() 
 }
 
-## Save objects
-if( !("Results.RData" %in% list.files(DateFile)) ){
-  # Results
-  Results = list('TimeseriesResults'=TimeseriesResults, 'RecDevResults'=RecDevResults, 'ParamResults'=ParamResults)
-  save(Results , file=paste(DateFile,"Results.RData",sep=""))
-  # Cleaning
-  CleanAdmbFn(SaveFile=DateFile, PrefixVec=tolower(AdmbVersion), KeepVec=c("dat"))
-  # Record
-  RecordList = list("R.version"=R.version, AdmbVersion=AdmbVersion, AgeMax=AgeMax, Nyears=Nyears, Ncomp_per_year=Ncomp_per_year, Nmethods=Nmethods, MethodSet=MethodSet, K=K, Linf=Linf, L0=L0, Amat=Amat, S50=S50, Sslope=Sslope, W_alpha=W_alpha, W_beta=W_beta, R0=R0, LMASS=LMASS, SigmaR=SigmaR, Fequil=Fequil, Frate=Frate, F1=F1, SigmaF=SigmaF, M=M, L_a=L_a, W_a=W_a, S_a=S_a, Mat_a=Mat_a, LMLSS=LMLSS, h=h, SB0=SB0, SBPR0=SBPR0, Nrep=Nrep, RandomSeed=RandomSeed)
-  capture.output(RecordList, file=paste(DateFile,"RecordList.txt",sep=""))
-  save(RecordList, file=paste(DateFile,"RecordList.RData",sep=""))
-}
-
-## Summary figure
-TimeseriesEst = TimeseriesResults[-1,,,Nyears,'Est']
-TimeseriesTrue = outer(rep(1,length(MethodSet)),TimeseriesResults['True',,,Nyears,'Est']) 
-ParamEst = ParamResults[-1,,,'Est']
-ParamTrue = outer(rep(1,length(MethodSet)),ParamResults['True',,,'Est'])
-
-# Plot time series results
-square = function(Obj) Obj^2
-png( file=paste(FigFile,"Timeseries_Summary.png",sep=""), width=16, height=8, res=200, units="in")
-  par(mfrow=c(2,4), mar=c(3,3,2,0), mgp=c(2,0.5,0), tck=-0.02, oma=c(0,2,0,0))
-  for(VarI in 1:3){
-    boxplot( t(TimeseriesEst[,,c('ln_F_t','ln_SB_t','ln_D_t')[VarI]]-TimeseriesTrue[,,c('ln_F_t','ln_SB_t','ln_D_t')[VarI]]), main=c("F","SB","D")[VarI], ylim=range(na.rm=TRUE,TimeseriesEst[,,c('ln_F_t','ln_SB_t','ln_D_t')[VarI]]-TimeseriesTrue[,,c('ln_F_t','ln_SB_t','ln_D_t')[VarI]]) + c(-0,0.2)*diff(range(na.rm=TRUE,TimeseriesEst[,,c('ln_F_t','ln_SB_t','ln_D_t')[VarI]]-TimeseriesTrue[,,c('ln_F_t','ln_SB_t','ln_D_t')[VarI]])) )
-    RMSE = sqrt(colMeans(square(t(TimeseriesEst[,,c('ln_F_t','ln_SB_t','ln_D_t')[VarI]]-TimeseriesTrue[,,c('ln_F_t','ln_SB_t','ln_D_t')[VarI]])), na.rm=TRUE))
-    Bias = colMeans(t(TimeseriesEst[,,c('ln_F_t','ln_SB_t','ln_D_t')[VarI]]-TimeseriesTrue[,,c('ln_F_t','ln_SB_t','ln_D_t')[VarI]]), na.rm=TRUE)
-    text( x=1:Nmethods, y=rep(par()$usr[4],2), labels=paste(format(RMSE,digits=2,nsmall=3),'\n',format(Bias,digits=2,nsmall=3),sep=""), pos=1, cex=2)
-    abline(h=0, lwd=3, lty="dotted")
-  }
-  for(ParamI in 1:5){
-    boxplot( t(ParamEst[,,ParamI]-ParamTrue[,,ParamI]), main=dimnames(ParamResults)[[3]][ParamI], ylim=range(na.rm=TRUE,ParamEst[,,ParamI]-ParamTrue[,,ParamI]) + c(-0,0.2)*diff(range(na.rm=TRUE,ParamEst[,,ParamI]-ParamTrue[,,ParamI])) )
-    RMSE = sqrt(colMeans(square(t(ParamEst[,,ParamI]-ParamTrue[,,ParamI])), na.rm=TRUE))
-    Bias = colMeans(t(ParamEst[,,ParamI]-ParamTrue[,,ParamI]), na.rm=TRUE)
-    text( x=1:Nmethods, y=rep(par()$usr[4],2), labels=paste(format(RMSE,digits=2,nsmall=3),'\n',format(Bias,digits=2,nsmall=3),sep=""), pos=1, cex=2)
-    abline(h=0, lwd=3, lty="dotted")
-  }
-  mtext(side=2, text="Error (log-space)", outer=TRUE) 
-dev.off()
     

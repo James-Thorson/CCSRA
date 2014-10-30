@@ -51,7 +51,6 @@ function( Method, M_prior, h_prior, D_prior, SigmaR_prior, AgeComp_at, Cw_t, W_a
   }
   if(Method=="CCSRA"){
     Map[["ln_F_t_input"]] = factor( rep(NA,length(Parameters$ln_F_t_input)) )
-    Map[["ln_SigmaR"]] = factor(NA)
   }
   
   #Map[["SigmaR"]] = factor(NA)
@@ -59,6 +58,12 @@ function( Method, M_prior, h_prior, D_prior, SigmaR_prior, AgeComp_at, Cw_t, W_a
   
   # declare random
   Random = NULL
+  if(Method=="SRA"){
+    Random = c(Random, "ln_F_t_input")
+  }
+  if(Method=="CCSRA"){
+    Random = c(Random, "ln_F_t_input")
+  }
   if( !("RecDev_hat"%in%names(Map)) ) Random = c("RecDev_hat")
   
   # Compile if necessary
