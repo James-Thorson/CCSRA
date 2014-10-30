@@ -11,7 +11,7 @@
 #   - Doesn't appear to have information to update RecDevs (SE always equals SigmaR)
 #
 # 3. Simulate data
-#   - Recruits (e.g., N_at[1,1]) arise from spawning biomass in that year (i.e., N_at[,1])
+#   - Recruits (numbers at age 0, i.e., N_at[1,1]) arise from spawning biomass in that year (i.e., N_at[,1])
 #   - Changes in effort (e.g., F[t+1]) arise from spawning biomass in the earlier year (e.g., SB[t])
 #   - Catches (e.g., C[t]) arise from removals in that year (i.e., F[t])
 #   - Cw_t -- Catch (weight) in year t
@@ -20,6 +20,8 @@
 #   - Zn_at -- total mortality (numbers) in year t and age a
 #
 ##############################
+
+setwd("C:/Users/James.Thorson/Desktop/")
 
 #######################
 # Header
@@ -153,6 +155,7 @@ for(RepI in 1:Nrep){
       # Set bounds
       Upr = rep(Inf, length(Obj$par))
         Upr[match("ln_SigmaR",names(Obj$par))] = log(1)
+        Upr[match("ln_F_t_input",names(Obj$par))] = log(2)
       Lwr = rep(-Inf, length(Obj$par))
       
       # Run
@@ -212,7 +215,8 @@ for(RepI in 1:Nrep){
     par(mfrow=c(2,2), mar=c(3,3,2,0), mgp=c(2,0.5,0), tck=-0.02)
     for(VarI in 1:4){
       if(VarI==4){ Mat = RecDevResults[,RepI,,] }else{ Mat = TimeseriesResults[,RepI,c('ln_F_t','ln_SB_t','ln_D_t')[VarI],,]}
-      matplot( exp(t(Mat[,,'Est'])), type="l", lty="solid", col=c("black","red","green","blue"), ylim=range(na.rm=TRUE,exp(rbind(Mat[,,'Est'],Mat[,,'Est']+1.96*Mat[,,'SE']))), lwd=2, xlab="Year", ylab="", main=c("F","SB","D","RecDev")[VarI], log="y" )
+      Ylim = range(na.rm=TRUE,exp(rbind(Mat[,,'Est'],Mat[,,'Est']+1.96*Mat[,,'SE'])))
+      matplot( exp(t(Mat[,,'Est'])), type="l", lty="solid", col=c("black","red","green","blue"), ylim=c(Ylim[1],min(2,Ylim[2])), lwd=2, xlab="Year", ylab="", main=c("F","SB","D","RecDev")[VarI], log="y" )
       for(MethodI in 1:length(MethodSet)){
         polygon( x=c(1:dim(Mat)[2],dim(Mat)[2]:1), y=exp(c(Mat[paste("Method=",MethodI),,'Est']+1.96*Mat[paste("Method=",MethodI),,'SE'],rev(Mat[paste("Method=",MethodI),,'Est']-1.96*Mat[paste("Method=",MethodI),,'SE']))), col=list(rgb(1,0,0,alpha=0.2),rgb(0,1,0,alpha=0.2),rgb(0,0,1,alpha=0.2))[[MethodI]], border=NA )
       }
