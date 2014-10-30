@@ -63,7 +63,7 @@ function( Method, M_prior, h_prior, D_prior, SigmaR_prior, AgeComp_at, Cw_t, W_a
   if(Method=="CCSRA"){
     Random = c(Random, "ln_F_t_input")
   }
-  if( !("RecDev_hat"%in%names(Map)) ) Random = c("RecDev_hat")
+  if( !("RecDev_hat"%in%names(Map)) ) Random = c(Random, "RecDev_hat")
   
   # Compile if necessary
   if(FALSE){
