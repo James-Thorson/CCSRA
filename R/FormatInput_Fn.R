@@ -28,7 +28,7 @@ function( Method, M_prior, h_prior, D_prior, SigmaR_prior, AgeComp_at, Cw_t, W_a
   if(Method=="SRA") Data$AgeComp_at[] = 0
 
   # Compile TMB inputs -- Parameters
-  Parameters = list( "ln_R0"=ln_R0_prior[3], "M"=M_prior[3], "h"=h_prior[3], "S50"=S50_prior[3]+rnorm(1), "Sslope"=Sslope_prior[3]+rnorm(1), "ln_SigmaR"=log(SigmaR_prior[3]), "ln_F_t_input"=log(rep(0.1,Nyears)), "RecDev_hat"=rep(0,AgeMax+Nyears))
+  Parameters = list( "ln_R0"=ln_R0_prior[3], "ln_M"=log(M_prior[3]), "h"=qlogis((h_prior[3]-0.2)/0.8), "S50"=S50_prior[3]+rnorm(1), "Sslope"=Sslope_prior[3]+rnorm(1), "ln_SigmaR"=log(SigmaR_prior[3]), "ln_F_t_input"=log(rep(0.1,Nyears)), "RecDev_hat"=rep(0,AgeMax+Nyears))
   
   # Compile TMB inputs -- Turn off parameters      
   Map = list()

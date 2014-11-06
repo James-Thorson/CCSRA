@@ -25,8 +25,8 @@ Type objective_function<Type>::operator() ()
   // =====================================================================
 
   PARAMETER( ln_R0 );
-  PARAMETER( M );
-  PARAMETER( h );
+  PARAMETER( ln_M );
+  PARAMETER( input_h );
   PARAMETER( S50 );
   PARAMETER( Sslope );
   PARAMETER( ln_SigmaR );
@@ -61,6 +61,8 @@ Type objective_function<Type>::operator() ()
   Type pi = 3.141592;
   
   // Transform parameters
+  Type M = exp( ln_M );
+  Type h = 0.20001 + 0.99999*1/exp(1+exp(-input_h));
   Type SigmaR = exp( ln_SigmaR );
   Type R0 = exp( ln_R0 );
   Type SBPR0 = 0;
