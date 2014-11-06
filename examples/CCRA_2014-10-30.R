@@ -37,7 +37,8 @@ library(CCSRA)
 library(TMB)
 
 # File structure
-TmbFile = paste0(system.file("executables", package="CCSRA"),"/")
+#TmbFile = paste0(system.file("executables", package="CCSRA"),"/")
+TmbFile = paste( "C:/Users/James.Thorson/Desktop/Project_git/CCSRA/inst/executables/" )
 
 # Date file
 Date = Sys.Date()
@@ -49,7 +50,15 @@ FigFile = paste0(DateFile,"Figs/")
 # Compile model
 Version = "CCSRA_v4"   # v3: Added priors on h and M; v4: Added RecDevs
 setwd(TmbFile)
-compile( dynlib(Version) )
+dyn.unload( paste0(Version,".dll") )
+file.remove( paste(Version,c(".dll",".o"),sep="") )
+compile( paste0(Version,".cpp") )
+
+if(TRUE){
+  SourceFile = "C:/Users/James.Thorson/Desktop/Project_git/CCSRA/R/"
+  File = list.files( SourceFile )
+  for(i in 1:length(File)) source( paste0(SourceFile,File[i]))
+}
   
 #######################
 # Settings
@@ -129,22 +138,24 @@ for(RepI in 1:Nrep){
     #if(F_method==-1 | F_method==-2) Cw_t_input = rep(0, length(Cw_t))
     #if(F_method==1 | F_method==2) Cw_t_input = Cw_t
     
-    # Transformations
+    # xTransformations
     Nloop = 2
     
     # Fit twice for bias adjustment if estimating recruitment deviations
     LoopI = 1
     for(LoopI in 1:Nloop){
       # Bias adjustment for each loop
-      if(LoopI==1) RecDev_biasadj = rep(0, Nyears+AgeMax)
       if(LoopI==2 && !("condition" %in% names(attributes(Sdreport))) ){
         SD = summary(Sdreport)      
         RecDev_biasadj = 1 - SD[which(rownames(SD)=="RecDev_hat"),'Std. Error']^2 / Report$SigmaR^2
+      }else{
+        RecDev_biasadj = rep(1, Nyears+AgeMax)
       } 
      
       # Format inputs
       Method = c("CC", "CCSRA", "SRA")[MethodI]
       InputList = FormatInput_Fn(Method=Method, M_prior=c(M,0.5), h_prior=c(h,0.1), D_prior=c(0.4,0.2), SigmaR_prior=c(0.6,0.2), AgeComp_at=DataList[['AgeComp_at']], Cw_t=DataList[['Cw_t']], W_a=W_a, Mat_a=Mat_a, RecDev_biasadj=RecDev_biasadj)
+      InputList$Map = InputList$Map[2]
       
       # Compile 
       dyn.load( paste0(TmbFile,dynlib(Version)) )
@@ -162,7 +173,14 @@ for(RepI in 1:Nrep){
       Opt = nlminb( start=Obj$par, objective=Obj$fn, gradient=Obj$gr, upper=Upr, lower=Lwr, control=list(trace=1, eval.max=1e4, iter.max=1e4, rel.tol=1e-14) )
       Opt[["final_gradient"]] = Obj$gr( Opt$par )
       Report = Obj$report()
-      Sdreport = try( sdreport(Obj) )
+      if( "bias.correct" %in% names(formals(sdreport)) ){
+        Obj$env$MCcontrol <- list("doMC"=FALSE, "seed"=RandomSeed%%1e6, "n"=1e4)
+        Sdreport = try( sdreport(Obj, bias.correct=FALSE, importance.sample=TRUE) )
+        if(LoopI==1) BiasCorr = cbind( "Orig"=Sdreport$value, "Epsilon"=Sdreport$unbiased.sample$value )
+        if(LoopI==2) BiasCorr = cbind( BiasCorr, "AdHoc"=Sdreport$value)
+      }else{
+        Sdreport = try( sdreport(Obj) )
+      }
     
       # Read in timeseries output
       if( !("condition" %in% names(attributes(Sdreport))) ){
