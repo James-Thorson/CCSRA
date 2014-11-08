@@ -185,8 +185,23 @@ Type objective_function<Type>::operator() ()
   for(int Index=0; Index<(Nyears+AgeMax); Index++){ 
     jnll -= dnorm( RecDev_hat(Index), Type(0), SigmaR, true); 
   }
-
+  // if bounds aren't equal, Sslope is normal past bounds (slots 1 and 2) with input SD (slot 5)
+  if( Sslope_prior(0) < Sslope_prior(1) ){
+    if( Sslope < Sslope_prior(0) ) jnll -= ( dnorm( Sslope, Sslope_prior(0), Sslope_prior(4), true ) - dnorm( Sslope_prior(0), Sslope_prior(0), Sslope_prior(4), true ) );
+    if( Sslope > Sslope_prior(1) ) jnll -= ( dnorm( Sslope, Sslope_prior(1), Sslope_prior(4), true ) - dnorm( Sslope_prior(1), Sslope_prior(1), Sslope_prior(4), true ) );
+  }
+  // if bounds are equal, Sslope is normal with input SD (slot 5) and input mean (slot 1)
+  if( Sslope_prior(0) >= Sslope_prior(1) ){
+    jnll -= dnorm( Sslope, (Sslope_prior(0)+Sslope_prior(1))/2, Sslope_prior(4), true );
+  }
+  
+  vector<Type> RecMult_t(Nyears+AgeMax);
+  for(int t=0; t<(Nyears+AgeMax); t++){
+    RecMult_t(t) = exp(RecDev_hat(t) - RecDev_biasadj(t)*pow(SigmaR,2)/Type(2));
+  }
+  
   // ===========================================================================
+  REPORT(RecMult_t);
   REPORT(S_a);
   REPORT(D_t);
   REPORT(F_t);
@@ -200,15 +215,16 @@ Type objective_function<Type>::operator() ()
   REPORT(RecDev_hat);
   REPORT(SigmaR);
   
-  ADREPORT(S_a);
-  ADREPORT(D_t);
-  ADREPORT(F_t);
+  //ADREPORT(S_a);
   ADREPORT(Param_hat);
-  ADREPORT(SB_t);
+  //ADREPORT(F_t);
+  //ADREPORT(SB_t);
+  //ADREPORT(D_t);
   ADREPORT(ln_F_t);
   ADREPORT(ln_SB_t);
   ADREPORT(ln_D_t);  
-  ADREPORT(SigmaR);
+  //ADREPORT(SigmaR);
+  ADREPORT(RecMult_t);
   // ===========================================================================
   return jnll;
 }

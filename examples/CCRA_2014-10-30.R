@@ -114,6 +114,7 @@ RandomSeed = ceiling(runif(1, min=1,max=1e6))
 TimeseriesResults = array(NA, dim=c(1+Nmethods,Nrep,3,Nyears,2), dimnames=list(c("True",paste("Method=",1:Nmethods)),paste("Rep=",1:Nrep),c("ln_F_t","ln_SB_t","ln_D_t"),paste("Year=",1:Nyears),c("Est","SE")))
 RecDevResults = array(NA, dim=c(1+Nmethods,Nrep,Nyears+AgeMax,2), dimnames=list(c("True",paste("Method=",1:Nmethods)),paste("Rep=",1:Nrep),c(paste("Age=",AgeMax:0),paste("Year=",2:Nyears)),c("Est","SE")))
 ParamResults = array(NA, dim=c(1+Nmethods,Nrep,5,2), dimnames=list(c("True",paste("Method=",1:Nmethods)),paste("Rep=",1:Nrep),c("ln_R0","M","h","S50","Sslope"),c("Est","SE")))
+BiasCorr = array(NA, dim=c(Nmethods,Nrep,Nyears+AgeMax,3), dimnames=list(paste("Method=",1:Nmethods),paste("Rep=",1:Nrep),c(paste("Age=",AgeMax:0),paste("Year=",2:Nyears)),c("Orig","Epsilon","AdHoc")))
 
 # Simulation loop
   RepI=1;  MethodI=2
@@ -154,30 +155,56 @@ for(RepI in 1:Nrep){
      
       # Format inputs
       Method = c("CC", "CCSRA", "SRA")[MethodI]
-      InputList = FormatInput_Fn(Method=Method, M_prior=c(M,0.5), h_prior=c(h,0.1), D_prior=c(0.4,0.2), SigmaR_prior=c(0.6,0.2), AgeComp_at=DataList[['AgeComp_at']], Cw_t=DataList[['Cw_t']], W_a=W_a, Mat_a=Mat_a, RecDev_biasadj=RecDev_biasadj)
-      InputList$Map = InputList$Map[2]
+      InputList = FormatInput_Fn(Method=Method, M_prior=c(M,0.5), h_prior=c(h,0.1), Sslope_prior=c(1,1,1), D_prior=c(0.4,0.2), SigmaR_prior=c(0.6,0.2), AgeComp_at=DataList[['AgeComp_at']], Cw_t=DataList[['Cw_t']], W_a=W_a, Mat_a=Mat_a, RecDev_biasadj=RecDev_biasadj)
+      if(Method=="CCSRA"){
+        InputList$Map = InputList$Map[2]  # Keep SigmaR
+      }
       
       # Compile 
       dyn.load( paste0(TmbFile,dynlib(Version)) )
-      Obj <- MakeADFun(data=InputList[['Data']], parameters=InputList[['Parameters']], map=InputList[['Map']], random=InputList[['Random']], inner.control=list(maxit=100) )
-      Obj$env$inner.control <- c(Obj$env$inner.control, "step.tol"=1e-12, "tol10"=1e-8, "grad.tol"=1e-12) 
+      if(LoopI==1) Obj <- MakeADFun(data=InputList[['Data']], parameters=InputList[['Parameters']], map=InputList[['Map']], random=InputList[['Random']], inner.control=list(maxit=100) )
+      if(LoopI==2){
+        if( !("ln_SigmaR" %in% names(InputList$Map)) ) InputList$Map = c( InputList$Map, list("ln_SigmaR"=factor(NA)) ) 
+        Obj <- MakeADFun(data=InputList[['Data']], parameters=ParList, map=InputList[['Map']], random=InputList[['Random']], inner.control=list(maxit=100) )
+      }
+      Obj$env$inner.control <- c(Obj$env$inner.control, "step.tol"=c(1e-8,1e-12)[1], "tol10"=c(1e-6,1e-8)[1], "grad.tol"=c(1e-8,1e-12)[1]) 
       Obj$fn( Obj$par )
-    
+      
       # Set bounds
       Upr = rep(Inf, length(Obj$par))
-        Upr[match("ln_SigmaR",names(Obj$par))] = log(1)
+        Upr[match("ln_SigmaR",names(Obj$par))] = log(2)
         Upr[match("ln_F_t_input",names(Obj$par))] = log(2)
+        Upr[match("Sslope",names(Obj$par))] = 5
+        Upr[match("S50",names(Obj$par))] = AgeMax
       Lwr = rep(-Inf, length(Obj$par))
       
       # Run
-      Opt = nlminb( start=Obj$par, objective=Obj$fn, gradient=Obj$gr, upper=Upr, lower=Lwr, control=list(trace=1, eval.max=1e4, iter.max=1e4, rel.tol=1e-14) )
+      Opt = nlminb( start=Obj$par, objective=Obj$fn, gradient=Obj$gr, upper=Upr, lower=Lwr, control=list(trace=1, eval.max=1e4, iter.max=1e4, rel.tol=1e-10) )
       Opt[["final_gradient"]] = Obj$gr( Opt$par )
+      
+      # Re-fit 
+      for(i in 1:10){
+        if( abs(min(Opt[["final_gradient"]]))>0.1 | Opt$message=="false convergence (8)" ){
+          Opt = nlminb( start=Obj$env$last.par.best[-Obj$env$random]+rnorm(length(Obj$par)), objective=Obj$fn, gradient=Obj$gr, upper=Upr, lower=Lwr, control=list(trace=1, eval.max=1e4, iter.max=1e4, rel.tol=1e-10) )
+        }else{
+          break()
+        }
+        Opt[["final_gradient"]] = Obj$gr( Opt$par )
+      }
+      
+      # Standard errors
       Report = Obj$report()
       if( "bias.correct" %in% names(formals(sdreport)) ){
         Obj$env$MCcontrol <- list("doMC"=FALSE, "seed"=RandomSeed%%1e6, "n"=1e4)
-        Sdreport = try( sdreport(Obj, bias.correct=FALSE, importance.sample=TRUE) )
-        if(LoopI==1) BiasCorr = cbind( "Orig"=Sdreport$value, "Epsilon"=Sdreport$unbiased.sample$value )
-        if(LoopI==2) BiasCorr = cbind( BiasCorr, "AdHoc"=Sdreport$value)
+        Sdreport = try( sdreport(Obj, bias.correct=c(TRUE,FALSE)[LoopI], importance.sample=FALSE) )
+        if(LoopI==1){
+          Opt0 = Opt
+          ParList = Obj$env$parList( Obj$env$last.par.best )
+          BiasCorr[MethodI,RepI,,c("Orig","Epsilon")] = cbind( Sdreport$value, Sdreport$unbiased$value )[grep("RecMult_t",names(Sdreport$value)),]
+        }
+        if(LoopI==2){
+          BiasCorr[MethodI,RepI,,"AdHoc"] = Sdreport$value[grep("RecMult_t",names(Sdreport$value))]
+        }
       }else{
         Sdreport = try( sdreport(Obj) )
       }
@@ -205,7 +232,7 @@ for(RepI in 1:Nrep){
       # Correct output for conventional SRA
       if(Method=="SRA"){
         RecDev_hat[] = NA
-      } 
+      }
     }  # End fitting loop
 
     # Record status results
@@ -228,6 +255,16 @@ for(RepI in 1:Nrep){
   # Record parameter estimates
   ParamResults['True',RepI,c("ln_R0","M","h","S50","Sslope"),'Est'] = c( log(R0), M, h, S50, Sslope )
   
+  # Plotting
+  if( exists("BiasCorr") ){
+    png( file=paste(FigFile,"BiasCorr_RepI=",RepI,".png",sep=""), width=3*3, height=3*1, res=200, units="in")
+      par(mfrow=c(1,3), mar=c(3,3,2,0), mgp=c(2,0.5,0), tck=-0.02)
+      for(MethodI in 1:length(MethodSet)){
+        matplot( BiasCorr[MethodI,RepI,,], type=c("l","p","p"))
+        text( x=mean(par()$usr[1:2]), y=c(1,0.9,0.8)*par()$usr[4], pos=1, labels=formatC(colMeans(BiasCorr[MethodI,RepI,,]),digits=3,format="f"), col=c("black","red","green"))
+      }
+    dev.off()
+  }
   # Plot results
   png( file=paste(FigFile,"Timeseries_RepI=",RepI,".png",sep=""), width=6, height=6, res=200, units="in")
     par(mfrow=c(2,2), mar=c(3,3,2,0), mgp=c(2,0.5,0), tck=-0.02)
