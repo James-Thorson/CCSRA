@@ -19,6 +19,10 @@
 #   - Dn_at -- Natural mortality (numbers) in year t and age a
 #   - Zn_at -- total mortality (numbers) in year t and age a
 #
+# CONVERGENCE SUGGESTIONS
+#  1. Put prior on Sslope so it doesn't go >4, because S50 becomes knife-edge and inestimable
+#  2. Explore a prior on logF to keep it <3
+#
 ##############################
 
 setwd("C:/Users/James.Thorson/Desktop/")
@@ -41,7 +45,7 @@ library(TMB)
 TmbFile = paste( "C:/Users/James.Thorson/Desktop/Project_git/CCSRA/inst/executables/" )
 
 # Date file
-Date = Sys.Date()
+Date = paste0(Sys.Date(),"b")
   DateFile = paste0(getwd(),"/",Date,"/")
   dir.create(DateFile)
 FigFile = paste0(DateFile,"Figs/")
@@ -122,15 +126,19 @@ for(RepI in 1:Nrep){
   for(MethodI in 1:Nmethods){
   
     # Simulation settings
-    set.seed(RepI + RandomSeed)
-    F_method = switch(MethodSet[MethodI], "CC"=-1, "CCSRA"=1, "SRA"=1)
+    set.seed( (RepI+RandomSeed) %% 1e6 )
+    Method = MethodSet[MethodI]
+    F_method = switch(Method, "CC"=-1, "CCSRA"=1, "SRA"=1)
     
     # Simulate data
     DataList = SimData_Fn( Nyears=Nyears, AgeMax=AgeMax, SigmaR=SigmaR, M=M, F1=F1, W_a=W_a, S_a=S_a, Mat_a=Mat_a, h=h, SB0=SB0, Frate=Frate, Fequil=Fequil, SigmaF=SigmaF, Ncomp_per_year=Ncomp_per_year )
     DataList[['AgeComp_at']][,1:(Nyears-1)] = 0
     
     # Plot projection
-    matplot( cbind(DataList[['SB_t']]/SB0,DataList[['F_t']],DataList[['Cw_t']]/max(DataList[['Cw_t']])), type="l", col=c("black","red","blue"), lty="solid")
+    png( file=paste(FigFile,"Simulation_RepI=",RepI,".png",sep=""), width=3*1, height=3*1, res=200, units="in")
+      par(mfrow=c(1,1), mar=c(3,3,2,0), mgp=c(2,0.5,0), tck=-0.02)
+      matplot( cbind(DataList[['SB_t']]/SB0,DataList[['F_t']],DataList[['Cw_t']]/max(DataList[['Cw_t']])), type="l", col=c("black","red","blue"), lty="solid")
+    dev.off()
     
     #######################
     # Estimate model
@@ -140,7 +148,7 @@ for(RepI in 1:Nrep){
     #if(F_method==1 | F_method==2) Cw_t_input = Cw_t
     
     # xTransformations
-    Nloop = 2
+    if(Method%in%c("CC","CCSRA","SRA")) Nloop = 2
     
     # Fit twice for bias adjustment if estimating recruitment deviations
     LoopI = 1
@@ -154,19 +162,27 @@ for(RepI in 1:Nrep){
       } 
      
       # Format inputs
-      Method = c("CC", "CCSRA", "SRA")[MethodI]
       InputList = FormatInput_Fn(Method=Method, M_prior=c(M,0.5), h_prior=c(h,0.1), Sslope_prior=c(1,1,1), D_prior=c(0.4,0.2), SigmaR_prior=c(0.6,0.2), AgeComp_at=DataList[['AgeComp_at']], Cw_t=DataList[['Cw_t']], W_a=W_a, Mat_a=Mat_a, RecDev_biasadj=RecDev_biasadj)
-      if(Method=="CCSRA"){
-        InputList$Map = InputList$Map[2]  # Keep SigmaR
-      }
+      # Keep SigmaR for CC and CCSRA
+      if(Method%in%c("CC","CCSRA") & "ln_SigmaR"%in%names(InputList$Map)) InputList$Map = InputList$Map[-which("ln_SigmaR"==names(InputList$Map))]
+      # Turn off RecDev for SRA (because it is often singular)
+      #if(Method%in%c("SRA") & !("RecDev_hat"%in%names(InputList$Map))) InputList$Map = c(InputList$Map, list("RecDev_hat"=factor(rep(NA,Nyears+AgeMax))))
+      # Increase starting value for ln_R0
+      InputList$Parameters$ln_R0 = 22
+      # Assume M and h are known
+      if(!("input_h"%in%names(InputList$Map))) InputList$Map = c(InputList$Map, list("input_h"=factor(NA)))
+      if(!("ln_M"%in%names(InputList$Map))) InputList$Map = c(InputList$Map, list("ln_M"=factor(NA)))
+      # Turn off SigmaR in 2nd loop
+      if(LoopI==2 & !("ln_SigmaR"%in%names(InputList$Map)) ) InputList$Map = c( InputList$Map, list("ln_SigmaR"=factor(NA)) )
+      # Change priors on F_t
+      InputList$Data$F_t_prior = c(0.0001, 2, 0.1, 999, 0.1, 1, Nyears)
+      # Change priors S50
+      InputList$Data$S50_prior = c(999, 999, 999, S50, 3, 999)
       
       # Compile 
       dyn.load( paste0(TmbFile,dynlib(Version)) )
-      if(LoopI==1) Obj <- MakeADFun(data=InputList[['Data']], parameters=InputList[['Parameters']], map=InputList[['Map']], random=InputList[['Random']], inner.control=list(maxit=100) )
-      if(LoopI==2){
-        if( !("ln_SigmaR" %in% names(InputList$Map)) ) InputList$Map = c( InputList$Map, list("ln_SigmaR"=factor(NA)) ) 
-        Obj <- MakeADFun(data=InputList[['Data']], parameters=ParList, map=InputList[['Map']], random=InputList[['Random']], inner.control=list(maxit=100) )
-      }
+      if(LoopI==1) Obj <- MakeADFun(data=InputList[['Data']], parameters=InputList[['Parameters']], map=InputList[['Map']], random=InputList[['Random']], inner.control=list(maxit=250) )
+      if(LoopI==2) Obj <- MakeADFun(data=InputList[['Data']], parameters=ParList, map=InputList[['Map']], random=InputList[['Random']], inner.control=list(maxit=250) )
       Obj$env$inner.control <- c(Obj$env$inner.control, "step.tol"=c(1e-8,1e-12)[1], "tol10"=c(1e-6,1e-8)[1], "grad.tol"=c(1e-8,1e-12)[1]) 
       Obj$fn( Obj$par )
       
@@ -175,7 +191,7 @@ for(RepI in 1:Nrep){
         Upr[match("ln_SigmaR",names(Obj$par))] = log(2)
         Upr[match("ln_F_t_input",names(Obj$par))] = log(2)
         Upr[match("Sslope",names(Obj$par))] = 5
-        Upr[match("S50",names(Obj$par))] = AgeMax
+        Upr[match("S50",names(Obj$par))] = AgeMax*1.5
       Lwr = rep(-Inf, length(Obj$par))
       
       # Run

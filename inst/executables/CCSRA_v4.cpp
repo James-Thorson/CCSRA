@@ -185,15 +185,29 @@ Type objective_function<Type>::operator() ()
   for(int Index=0; Index<(Nyears+AgeMax); Index++){ 
     jnll -= dnorm( RecDev_hat(Index), Type(0), SigmaR, true); 
   }
-  // if bounds aren't equal, Sslope is normal past bounds (slots 1 and 2) with input SD (slot 5)
-  if( Sslope_prior(0) < Sslope_prior(1) ){
-    if( Sslope < Sslope_prior(0) ) jnll -= ( dnorm( Sslope, Sslope_prior(0), Sslope_prior(4), true ) - dnorm( Sslope_prior(0), Sslope_prior(0), Sslope_prior(4), true ) );
-    if( Sslope > Sslope_prior(1) ) jnll -= ( dnorm( Sslope, Sslope_prior(1), Sslope_prior(4), true ) - dnorm( Sslope_prior(1), Sslope_prior(1), Sslope_prior(4), true ) );
-  }
-  // if bounds are equal, Sslope is normal with input SD (slot 5) and input mean (slot 1)
-  if( Sslope_prior(0) >= Sslope_prior(1) ){
-    jnll -= dnorm( Sslope, (Sslope_prior(0)+Sslope_prior(1))/2, Sslope_prior(4), true );
-  }
+  // Selex-S50
+  jnll -= dnorm( S50, S50_prior(3), S50_prior(4), true); 
+  // Selex-slope
+    // if bounds aren't equal, Sslope is normal past bounds (slots 1 and 2) with input SD (slot 5)
+    if( Sslope_prior(0) < Sslope_prior(1) ){
+      if( Sslope < Sslope_prior(0) ) jnll -= ( dnorm( Sslope, Sslope_prior(0), Sslope_prior(4), true ) - dnorm( Sslope_prior(0), Sslope_prior(0), Sslope_prior(4), true ) );
+      if( Sslope > Sslope_prior(1) ) jnll -= ( dnorm( Sslope, Sslope_prior(1), Sslope_prior(4), true ) - dnorm( Sslope_prior(1), Sslope_prior(1), Sslope_prior(4), true ) );
+    }
+    // if bounds are equal, Sslope is normal with input SD (slot 5) and input mean (slot 1)
+    if( Sslope_prior(0) >= Sslope_prior(1) ){
+      jnll -= dnorm( Sslope, (Sslope_prior(0)+Sslope_prior(1))/2, Sslope_prior(4), true );
+    }
+  // F_t
+    // if bounds aren't equal, F_t is normal past bounds (slots 1 and 2) with input SD (slot 5)
+    vector<Type> pen_F(Nyears);
+    for(int YearI=0; YearI<Nyears; YearI++){
+      pen_F(YearI) = 0;
+      if( true ){
+        if( log(F_t(YearI)) < log(F_t_prior(0)) ) pen_F(YearI) = ( dnorm( log(F_t(YearI)), log(F_t_prior(0)), F_t_prior(4), true ) - dnorm( log(F_t_prior(0)), log(F_t_prior(0)), F_t_prior(4), true ) );
+        if( log(F_t(YearI)) > log(F_t_prior(1)) ) pen_F(YearI) = ( dnorm( log(F_t(YearI)), log(F_t_prior(1)), F_t_prior(4), true ) - dnorm( log(F_t_prior(1)), log(F_t_prior(1)), F_t_prior(4), true ) );
+      }
+    }
+    jnll -= sum(pen_F);
   
   vector<Type> RecMult_t(Nyears+AgeMax);
   for(int t=0; t<(Nyears+AgeMax); t++){
@@ -214,6 +228,8 @@ Type objective_function<Type>::operator() ()
   REPORT(ln_D_t);
   REPORT(RecDev_hat);
   REPORT(SigmaR);
+  REPORT(jnll);
+  REPORT(pen_F);
   
   //ADREPORT(S_a);
   ADREPORT(Param_hat);
