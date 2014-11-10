@@ -1,5 +1,5 @@
 FormatInput_Fn <-
-function( Method, M_prior, h_prior, D_prior, SigmaR_prior, Sslope_prior=c(-999,999,1), AgeComp_at, Cw_t, W_a, Mat_a, RecDev_biasadj ){
+function( Method, M_prior, h_prior, D_prior, SigmaR_prior, Sslope_prior=c(-999,999,1), AgeComp_at, Index_t, Cw_t, W_a, Mat_a, RecDev_biasadj ){
   
   # Calculate derived stuff
   Nyears = ncol(AgeComp_at)
@@ -24,11 +24,10 @@ function( Method, M_prior, h_prior, D_prior, SigmaR_prior, Sslope_prior=c(-999,9
   CatchCV = 0.01
   Data = list("Nyears"=Nyears, "AgeMax"=AgeMax, "F_method"=F_method, "CatchCV"=CatchCV, "ln_R0_prior"=ln_R0_prior, "M_prior"=M_prior, "h_prior"=h_prior, 
             "S50_prior"=S50_prior, "Sslope_prior"=Sslope_prior, "F_t_prior"=F_t_prior, "D_prior"=D_prior, "SigmaR_prior"=SigmaR_prior, 
-            "RecDev_prior"=RecDev_prior, "RecDev_biasadj"=RecDev_biasadj, "Cw_t"=Cw_t, "W_a"=W_a, "Mat_a"=Mat_a, "AgeComp_at"=AgeComp_at)
-  if(Method=="SRA") Data$AgeComp_at[] = 0
+            "RecDev_prior"=RecDev_prior, "RecDev_biasadj"=RecDev_biasadj, "Cw_t"=Cw_t, "W_a"=W_a, "Mat_a"=Mat_a, "AgeComp_at"=AgeComp_at, "Index_t"=Index_t)
 
   # Compile TMB inputs -- Parameters
-  Parameters = list( "ln_R0"=ln_R0_prior[3], "ln_M"=log(M_prior[3]), "input_h"=qlogis((h_prior[3]-0.2)/0.8), "S50"=S50_prior[3], "Sslope"=Sslope_prior[3], "ln_SigmaR"=log(SigmaR_prior[3]), "ln_F_t_input"=log(rep(0.1,Nyears)), "RecDev_hat"=rep(0,AgeMax+Nyears))
+  Parameters = list( "ln_R0"=ln_R0_prior[3], "ln_M"=log(M_prior[3]), "input_h"=qlogis((h_prior[3]-0.2)/0.8), "S50"=S50_prior[3], "Sslope"=Sslope_prior[3], "ln_SigmaR"=log(SigmaR_prior[3]), "Survey_par"=c(log(0.0001),log(0.0001)), "ln_F_t_input"=log(rep(0.1,Nyears)), "RecDev_hat"=rep(0,AgeMax+Nyears))
   
   # Compile TMB inputs -- Turn off parameters      
   Map = list()
@@ -41,6 +40,7 @@ function( Method, M_prior, h_prior, D_prior, SigmaR_prior, Sslope_prior=c(-999,9
     Map[["ln_R0"]] = factor( NA )
     Map[["ln_SigmaR"]] = factor(NA)
     Map[["input_h"]] = factor(NA)
+    Map[["Survey_par"]] = factor( rep(NA,2) )
   }
   if(Method=="SRA"){
     #Map[["M"]] = factor(NA)
@@ -48,10 +48,15 @@ function( Method, M_prior, h_prior, D_prior, SigmaR_prior, Sslope_prior=c(-999,9
     Map[["ln_SigmaR"]] = factor(NA)
     Map[["S50"]] = factor(NA)
     Map[["Sslope"]] = factor(NA)
+    Map[["Survey_par"]] = factor( rep(NA,2) )
   }
   if(Method=="CCSRA"){
     Map[["ln_SigmaR"]] = factor(NA)
-    #Map[["ln_F_t_input"]] = factor( c(1,1:(Nyears-1)) )
+    Map[["Survey_par"]] = factor( rep(NA,2) )
+  }
+  if(Method=="AS"){
+    Map[["ln_SigmaR"]] = factor(NA)
+    Map[["Survey_par"]] = factor( c(1,NA) )
   }
   
   #Map[["SigmaR"]] = factor(NA)
@@ -65,15 +70,10 @@ function( Method, M_prior, h_prior, D_prior, SigmaR_prior, Sslope_prior=c(-999,9
   if(Method=="CCSRA"){
     Random = c(Random, "ln_F_t_input")
   }
-  if( !("RecDev_hat"%in%names(Map)) ) Random = c(Random, "RecDev_hat")
-  
-  # Compile if necessary
-  if(FALSE){
-    setwd(AdmbFile)
-    dyn.unload( paste0(AdmbFile,dynlib(Version)) )
-    file.remove( paste0(Version,c(".dll",".o")) )
-    compile( paste0(Version,".cpp") )
+  if(Method=="AS"){
+    Random = c(Random, "ln_F_t_input")
   }
+  if( !("RecDev_hat"%in%names(Map)) ) Random = c(Random, "RecDev_hat")
   
   # Input
   InputList = list("Data"=Data, "Parameters"=Parameters, "Random"=Random, "Map"=Map)

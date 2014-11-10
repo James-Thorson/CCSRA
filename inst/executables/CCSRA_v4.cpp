@@ -21,6 +21,7 @@ Type objective_function<Type>::operator() ()
   DATA_VECTOR( W_a );
   DATA_VECTOR( Mat_a );
   DATA_MATRIX( AgeComp_at );
+  DATA_MATRIX( Index_t );
    
   // =====================================================================
 
@@ -30,6 +31,7 @@ Type objective_function<Type>::operator() ()
   PARAMETER( S50 );
   PARAMETER( Sslope );
   PARAMETER( ln_SigmaR );
+  PARAMETER_VECTOR( Survey_par );
   PARAMETER_VECTOR( ln_F_t_input );
   PARAMETER_VECTOR( RecDev_hat );
 
@@ -42,6 +44,7 @@ Type objective_function<Type>::operator() ()
   vector<Type> F_t(Nyears);
   vector<Type> ln_F_t(Nyears);
   vector<Type> SB_t(Nyears);
+  vector<Type> Bexploit_t(Nyears);
   vector<Type> ln_SB_t(Nyears);
   vector<Type> D_t(Nyears);
   vector<Type> ln_D_t(Nyears);
@@ -59,8 +62,11 @@ Type objective_function<Type>::operator() ()
   // other global variables
   Type jnll = 0;
   Type pi = 3.141592;
+  Type infinity = 1.0 / 0.0;
   
   // Transform parameters
+  Type survey_q = exp( Survey_par(0) );
+  Type survey_extrasd = exp( Survey_par(1) );
   Type M = exp( ln_M );
   Type h = 0.20001 + 0.99999*1/exp(1+exp(-input_h));
   Type SigmaR = exp( ln_SigmaR );
@@ -100,10 +106,12 @@ Type objective_function<Type>::operator() ()
   }
   // Summaries
   SB_t(0) = 0;
-  Cw_t_hat(0) = 0; 
+  Cw_t_hat(0) = 0;
+  Bexploit_t(0) = 0; 
   for(int AgeI=0; AgeI<=AgeMax; AgeI++){
     SB_t(0) += W_a(AgeI) * Mat_a(AgeI) * N_at(AgeI,0);
     Cw_t_hat(0) += Cn_at(AgeI,0) * W_a(AgeI);
+    Bexploit_t(0) += W_a(AgeI) * S_a(AgeI) * N_at(AgeI,0);
   }
   
   // Projection
@@ -112,11 +120,14 @@ Type objective_function<Type>::operator() ()
     for(int AgeI=1; AgeI<=AgeMax; AgeI++){
       N_at(AgeI,YearI) = N_at(AgeI-1,YearI-1) - Zn_at(AgeI-1,YearI-1);
     }
-    // Spawning biomass
+    // Spawning and exploitable biomass
     SB_t(YearI) = 0;
     for(int AgeI=1; AgeI<=AgeMax; AgeI++) SB_t(YearI) += W_a(AgeI) * Mat_a(AgeI) * N_at(AgeI,YearI);  // Start at AgeI=1, because recruitment hasn't been calculated yet
     // Recruitment
     N_at(0,YearI) = Type(4) * h * R0 * SB_t(YearI) / ( SB0*(Type(1)-h) + SB_t(YearI)*(Type(5)*h-Type(1)) )  * exp(RecDev_hat(AgeMax+YearI) - RecDev_biasadj(AgeMax+YearI)*pow(SigmaR,2)/Type(2)); 
+    // Exploitable biomass
+    Bexploit_t(YearI) = 0;
+    for(int AgeI=0; AgeI<=AgeMax; AgeI++) Bexploit_t(YearI) += W_a(AgeI) * S_a(AgeI) * N_at(AgeI,YearI);
     // Calculate F for Pope's approximation
     if(F_method==2){ 
       tmp_sum = 0;
@@ -164,6 +175,14 @@ Type objective_function<Type>::operator() ()
     }
   }
 
+  // Objective function -- fishery index
+  for(int YearI=0; YearI<Nyears; YearI++){
+    //if( Index_t(YearI,0)!=infinity ){
+    if( !R_IsNA(asDouble(Index_t(YearI,0))) ){
+      jnll -= dnorm( log(Index_t(YearI,0)), log(survey_q)+log(Bexploit_t(YearI)), Index_t(YearI,1)+survey_extrasd, true);
+    }
+  }
+  
   // Objective function -- compositional data
   for(int AgeI=0; AgeI<=AgeMax; AgeI++){  
   for(int YearI=0; YearI<Nyears; YearI++){
@@ -230,6 +249,8 @@ Type objective_function<Type>::operator() ()
   REPORT(SigmaR);
   REPORT(jnll);
   REPORT(pen_F);
+  REPORT( survey_q );
+  REPORT( survey_extrasd );
   
   //ADREPORT(S_a);
   ADREPORT(Param_hat);
