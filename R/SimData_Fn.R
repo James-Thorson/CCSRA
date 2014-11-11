@@ -7,7 +7,7 @@ function( Nyears, AgeMax, SigmaR, M, F1, W_a, S_a, Mat_a, h, SB0, Frate, Fequil,
   
   # Initialization
   F_t[1] = F1
-  N_at[,1] = R0 * exp(-M * 0:AgeMax) * exp( RecDev[1:(AgeMax+1)] )
+  N_at[,1] = R0 * exp(-M * 0:AgeMax) * exp( RecDev[(AgeMax+1):1] )
   SB_t[1] = sum( N_at[,1] * W_a * Mat_a )
   Bexploit_t[1] = sum( N_at[,1] * W_a * S_a )
   if(F_method==-1 | F_method==1){

@@ -80,7 +80,7 @@ Type objective_function<Type>::operator() ()
   // Abundance
   for(int AgeI=0; AgeI<=AgeMax; AgeI++){
     S_a(AgeI) = 1 / (1 + exp( -Sslope * (Type(AgeI) - S50) )); 
-    N_at(AgeI,0) = R0 * exp(-M * Type(AgeI)) * exp(RecDev_hat(AgeI) - RecDev_biasadj(AgeI)*pow(SigmaR,2)/2);
+    N_at(AgeI,0) = R0 * exp(-M * Type(AgeI)) * exp(RecDev_hat(AgeMax-AgeI) - RecDev_biasadj(AgeMax-AgeI)*pow(SigmaR,2)/2);
   }
   // Calculate F for Pope's approximation
   if(F_method==2){ 

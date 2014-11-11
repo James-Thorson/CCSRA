@@ -41,11 +41,18 @@ library(CCSRA)
 library(TMB)
 
 # File structure
-#TmbFile = paste0(system.file("executables", package="CCSRA"),"/")
-TmbFile = paste( "C:/Users/James.Thorson/Desktop/Project_git/CCSRA/inst/executables/" )
+TmbFile = paste0(system.file("executables", package="CCSRA"),"/")
 
+# If running locally from J. Thorson's laptop
+if(TRUE){
+  TmbFile = paste( "C:/Users/James.Thorson/Desktop/Project_git/CCSRA/inst/executables/" )
+  SourceFile = "C:/Users/James.Thorson/Desktop/Project_git/CCSRA/R/"
+  File = list.files( SourceFile )
+  for(i in 1:length(File)) source( paste0(SourceFile,File[i]))
+}
+  
 # Date file
-Date = paste0(Sys.Date(),"a")
+Date = paste0(Sys.Date(),"b")
   DateFile = paste0(getwd(),"/",Date,"/")
   dir.create(DateFile)
 FigFile = paste0(DateFile,"Figs/")
@@ -58,12 +65,6 @@ dyn.unload( paste0(Version,".dll") )
 file.remove( paste(Version,c(".dll",".o"),sep="") )
 compile( paste0(Version,".cpp") )
 
-if(TRUE){
-  SourceFile = "C:/Users/James.Thorson/Desktop/Project_git/CCSRA/R/"
-  File = list.files( SourceFile )
-  for(i in 1:length(File)) source( paste0(SourceFile,File[i]))
-}
-  
 #######################
 # Settings
 #######################
@@ -135,6 +136,7 @@ for(RepI in 1:Nrep){
     # Exclude all age-comp except for final year, except for age-structured model
     if( Method%in%c("CC","CCSRA") ) DataList[['AgeComp_at']][,1:(Nyears-1)] = 0
     if( Method=="SRA" ) DataList[['AgeComp_at']][] = 0
+    if( Method=="AS" ) DataList[['AgeComp_at']][,1:ceiling(Nyears/2)] = 0
     # Turn off index except for age-structured model
     if( Method%in%c("CC","CCSRA","SRA") ) DataList[['Index_t']][,1] = NA
 
