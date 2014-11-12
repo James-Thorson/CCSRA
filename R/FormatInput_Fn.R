@@ -27,7 +27,7 @@ function( Method, M_prior, h_prior, D_prior, SigmaR_prior, Sslope_prior=c(-999,9
             "RecDev_prior"=RecDev_prior, "RecDev_biasadj"=RecDev_biasadj, "Cw_t"=Cw_t, "W_a"=W_a, "Mat_a"=Mat_a, "AgeComp_at"=AgeComp_at, "Index_t"=Index_t)
 
   # Compile TMB inputs -- Parameters
-  Parameters = list( "ln_R0"=ln_R0_prior[3], "ln_M"=log(M_prior[3]), "input_h"=qlogis((h_prior[3]-0.2)/0.8), "S50"=S50_prior[3], "Sslope"=Sslope_prior[3], "ln_SigmaR"=log(SigmaR_prior[3]), "Survey_par"=c(log(0.0001),log(0.0001)), "ln_F_t_input"=log(rep(0.1,Nyears)), "RecDev_hat"=rep(0,AgeMax+Nyears))
+  Parameters = list( "ln_R0"=ln_R0_prior[3], "ln_M"=log(M_prior[3]), "input_h"=qlogis((h_prior[3]-0.2)/0.8), "S50"=S50_prior[3], "Sslope"=Sslope_prior[3], "ln_SigmaR"=log(SigmaR_prior[4]), "Survey_par"=c(log(0.0001),log(0.0001)), "ln_F_t_input"=log(rep(0.1,Nyears)), "RecDev_hat"=rep(0,AgeMax+Nyears))
   
   # Compile TMB inputs -- Turn off parameters      
   Map = list()
