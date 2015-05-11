@@ -256,7 +256,7 @@ Type objective_function<Type>::operator() ()
   ADREPORT(Param_hat);
   //ADREPORT(F_t);
   //ADREPORT(SB_t);
-  //ADREPORT(D_t);
+  ADREPORT(D_t);
   ADREPORT(ln_F_t);
   ADREPORT(ln_SB_t);
   ADREPORT(ln_D_t);  
