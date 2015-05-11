@@ -1,12 +1,14 @@
 SimData_Fn <-
-function( Nyears, AgeMax, SigmaR, M, F1, W_a, S_a, Mat_a, h, SB0, Frate, Fequil, SigmaF, Ncomp_per_year, SurveyCV ){
+function( Nyears, AgeMax, SigmaR, M, F1, W_a, S_a, Mat_a, h, SB0, Frate, Fequil, SigmaF, Fdynamics="Endogenous", Fmax=NA, Ncomp_per_year, SurveyCV ){
   # Data objects
   Cw_t = SB_t = F_t = Bexploit_t = rep(NA, Nyears)
   Zn_at = Dn_at = Cn_at = N_at = matrix(NA, nrow=AgeMax+1, ncol=Nyears)
   RecDev = rnorm( Nyears + AgeMax, mean=-SigmaR^2/2, sd=SigmaR )
+  if( Fdynamics=="Ramp" ) Framp_t = c( "rampup"=seq(F1,Fmax,length=floor(Nyears/2)), "peak"=rep(Fmax,floor((Nyears-floor(Nyears/2))/2)), "managed"=rep(Fmax/3,Nyears-floor(Nyears/2)-floor((Nyears-floor(Nyears/2))/2)))
   
   # Initialization
-  F_t[1] = F1
+  if(Fdynamics=="Endogenous") F_t[1] = F1
+  if(Fdynamics=="Ramp") F_t[1] = Framp_t[1]
   N_at[,1] = R0 * exp(-M * 0:AgeMax) * exp( RecDev[(AgeMax+1):1] )
   SB_t[1] = sum( N_at[,1] * W_a * Mat_a )
   Bexploit_t[1] = sum( N_at[,1] * W_a * S_a )
@@ -25,8 +27,13 @@ function( Nyears, AgeMax, SigmaR, M, F1, W_a, S_a, Mat_a, h, SB0, Frate, Fequil,
   # Projection
   for(YearI in 2:Nyears){
     # Fishing effort
-    F_t[YearI] = F_t[YearI-1] * (SB_t[YearI-1] / (Fequil * SB0))^Frate * exp( rnorm(1, mean=-SigmaF^2/2, sd=SigmaF) )
+    if(Fdynamics=="Endogenous"){
+      F_t[YearI] = F_t[YearI-1] * (SB_t[YearI-1] / (Fequil * SB0))^Frate * exp( rnorm(1, mean=-SigmaF^2/2, sd=SigmaF) )
       if( F_t[YearI] > 0.95 & (F_method==-2 | F_method==2) ) F_t[YearI] = 0.95
+    }
+    if(Fdynamics=="Ramp"){
+      F_t[YearI] = Framp_t[YearI]
+    }
     # Survival
     N_at[-1,YearI] = N_at[-AgeMax,YearI-1] - Zn_at[-AgeMax,YearI-1]
     # Spawning biomass
