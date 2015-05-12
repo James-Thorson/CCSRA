@@ -51,7 +51,7 @@ FigFile = paste0(DateFile,"Figs/")
   dir.create(FigFile)
 
 # Compile model
-Version = "CCSRA_v4"   # v3: Added priors on h and M; v4: Added RecDevs
+Version = "CCSRA_v5"   # v3: Added priors on h and M; v4: Added RecDevs; v5: fixed bug in steepness bounding
 setwd(TmbFile)
 dyn.unload( paste0(Version,".dll") )
 file.remove( paste(Version,c(".dll",".o"),sep="") )

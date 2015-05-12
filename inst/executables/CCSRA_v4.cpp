@@ -68,7 +68,7 @@ Type objective_function<Type>::operator() ()
   Type survey_q = exp( Survey_par(0) );
   Type survey_extrasd = exp( Survey_par(1) );
   Type M = exp( ln_M );
-  Type h = 0.20001 + 0.99999*1/exp(1+exp(-input_h));
+  Type h = 0.2001 + 0.7998*1/(1+exp(-input_h));
   Type SigmaR = exp( ln_SigmaR );
   Type R0 = exp( ln_R0 );
   Type SBPR0 = 0;
