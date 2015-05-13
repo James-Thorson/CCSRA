@@ -12,8 +12,8 @@ function( Method, M_prior, h_prior, D_prior, SigmaR_prior, Sslope_prior=c(-999,9
   # Priors
   ln_R0_prior = c(10, 30, 20, 999, 999, 1)
   F_t_prior = c( 0, 3, 0.1, 999, 0.1, 1, Nyears )
-  h_prior = c(0.2, 1.0, ifelse(Method=="CC",0.9999,0.8), h_alpha, h_beta, 1)
-  M_prior = c(0, 1, 0.2, M_prior[1], M_prior[2], 4)
+  h_prior = c(0.2, 1.0, ifelse(Method=="CC",0.9999,h_prior[1]), h_alpha, h_beta, 1)
+  M_prior = c(0, 1, M_prior[1], M_prior[1], M_prior[2], 4)
   S50_prior = c(999, 999, 5, 999, 999, 3)
   Sslope_prior = c(Sslope_prior[1], Sslope_prior[2], ifelse(Method=="SRA",10,1), 999, Sslope_prior[3], 1)
   D_prior = c(D_prior[1], D_prior[2], ifelse(Method=="SRA",1,0))
