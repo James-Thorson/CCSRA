@@ -66,7 +66,7 @@ AgeMax = 20
 Nyears = 20
 Ncomp_per_year = 100
 SurveyCV = 0.4
-MethodSet = c("CC", "CCSRA", "SRA", "AS" ) # 1: Catch curve; 2: CC-SRA; 3:DB-SRA; 4: Age-structured 
+MethodSet = c("CC", "CCSRA", "SRA", "AS" )[2] # 1: Catch curve; 2: CC-SRA; 3:DB-SRA; 4: Age-structured 
                                 # Slow=Periodic (high-steepness, late-maturity, high survival) "red snapper" from fishbase
 # Biological parameters         # Fast=Opportunistic (low-steepness, early maturity, low survival) "Pacific sardine" from fishbase
 SpeciesType = 1 # 1=Slow; 2=Fast
@@ -103,6 +103,13 @@ SBPR0 = SB0 / R0
 # Simulate data
 #######################
 
+# Which model?
+MethodI = 1
+Method = MethodSet[MethodI]
+
+# Simulation settings
+F_method = switch(Method, "CC"=-1, "CCSRA"=1, "SRA"=1, "AS"=1) # 1: Explicit F; 2: Hybrid (not implemented)
+
 # Simulate data
 DataList = SimData_Fn( Nyears=Nyears, AgeMax=AgeMax, SigmaR=SigmaR, M=M, F1=F1, W_a=W_a, S_a=S_a, Mat_a=Mat_a, h=h, SB0=SB0, Frate=Frate, Fequil=Fequil, SigmaF=SigmaF, Ncomp_per_year=Ncomp_per_year, SurveyCV=SurveyCV )
 # Exclude all age-comp except for final year, except for age-structured model
@@ -117,12 +124,6 @@ matplot( cbind(DataList[['SB_t']]/SB0,DataList[['F_t']],DataList[['Cw_t']]/max(D
 #######################
 # Estimate model
 #######################
-
-# Which model?
-Method = MethodSet[MethodI]
-
-# Simulation settings
-F_method = switch(Method, "CC"=-1, "CCSRA"=1, "SRA"=1, "AS"=1) # 1: Explicit F; 2: Hybrid (not implemented)
 
 # Fit twice for bias adjustment if estimating recruitment deviations
 for(LoopI in 1:2){
@@ -178,20 +179,8 @@ for(LoopI in 1:2){
   
   # Standard errors
   Report = Obj$report()
-  if( "bias.correct" %in% names(formals(sdreport)) ){
-    Obj$env$MCcontrol <- list("doMC"=FALSE, "seed"=RandomSeed%%1e6, "n"=1e4)
-    Sdreport = try( sdreport(Obj, bias.correct=c(TRUE,FALSE)[LoopI], importance.sample=FALSE) )
-    if(LoopI==1){
-      Opt0 = Opt
-      ParList = Obj$env$parList( Obj$env$last.par.best )
-      BiasCorr[MethodSet[MethodI],RepI,,c("Orig","Epsilon")] = cbind( Sdreport$value, Sdreport$unbiased$value )[grep("RecMult_t",names(Sdreport$value)),]
-    }
-    if(LoopI==2){
-      BiasCorr[MethodSet[MethodI],RepI,,"AdHoc"] = Sdreport$value[grep("RecMult_t",names(Sdreport$value))]
-    }
-  }else{
-    Sdreport = try( sdreport(Obj) )
-  }
+  Sdreport = try( sdreport(Obj) )
+  ParList = Obj$env$parList( Opt$par )
 
 }  # End fitting loop
 
