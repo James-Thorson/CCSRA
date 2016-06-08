@@ -1,5 +1,5 @@
 SimData_Fn <-
-function( Nyears, AgeMax, SigmaR, M, F1, W_a, S_a, Mat_a, h, SB0, Frate, Fequil, SigmaF, Fdynamics="Endogenous", Fmax=NA, Ncomp_per_year, SurveyCV ){
+function( F_method, Nyears, AgeMax, SigmaR, M, F1, W_a, S_a, Mat_a, h, SB0, Frate, Fequil, SigmaF, Fdynamics="Endogenous", Fmax=NA, Ncomp_per_year, SurveyCV ){
   # Data objects
   Cw_t = SB_t = F_t = Bexploit_t = rep(NA, Nyears)
   Zn_at = Dn_at = Cn_at = N_at = matrix(NA, nrow=AgeMax+1, ncol=Nyears)
