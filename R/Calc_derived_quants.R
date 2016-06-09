@@ -1,4 +1,14 @@
 
+#' Calculate biological reference points
+#'
+#' \code{Calc_derived_quants} calculates derived quanties for status or productivity
+#'
+#' @param Obj, the fitted TMB object
+
+#' @return List, a tagged list of potentially useful benchmarks
+
+
+
 Calc_derived_quants = function( Obj ){
   # Extract elements
   Data = Obj$env$data
