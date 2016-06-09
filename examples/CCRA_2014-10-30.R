@@ -53,8 +53,8 @@ FigFile = paste0(DateFile,"Figs/")
 # Compile model
 Version = "CCSRA_v5"   # v3: Added priors on h and M; v4: Added RecDevs; v5: fixed bug in steepness bounding
 setwd(TmbFile)
-dyn.unload( paste0(Version,".dll") )
-file.remove( paste(Version,c(".dll",".o"),sep="") )
+#dyn.unload( paste0(Version,".dll") )
+#file.remove( paste(Version,c(".dll",".o"),sep="") )
 compile( paste0(Version,".cpp") )
 
 #######################
@@ -182,6 +182,8 @@ for(LoopI in 1:2){
   Sdreport = try( sdreport(Obj) )
   ParList = Obj$env$parList( Opt$par )
 
+  # Derived quantities
+  Derived = Calc_derived_quants( Obj )
 }  # End fitting loop
 
     
