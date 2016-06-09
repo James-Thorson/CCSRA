@@ -8,12 +8,12 @@
 #' @param L0, Expected length at age 0 from fitting a von Bertalanffy growth curve
 #' @param Lcv, coefficient of variation for size given expected length at age
 #' @param Lbin_mat, a matrix with two columns, where each row specifies the lower and upper length for a given length bin (the lowest should be -Inf, and highest Inf)
-#' @param AgeComp_lt, a matrix of length-composition data, where columns are samples in year t, and cells are the count of samples with a given length and year
+#' @param LengthComp_lt, a matrix of length-composition data, where columns are samples in year t, and cells are the count of samples with a given length and year
 #' @param checkforbugs, a boolean stating whether to check for bugs or not
 
 #' @return AgeComp_at, a matrix of expected age-composition data, where columns are samples in year t, and cells are the count of samples with a given age and year
 
-Convert_length_to_age_samples = function(K, Linf, L0, Lcv, Lbin_mat, AgeComp_lt, checkforbugs=TRUE){
+Convert_length_to_age_samples = function(K, Linf, L0, Lcv, Lbin_mat, LengthComp_lt, checkforbugs=TRUE){
   # warnings
   if( checkforbugs==TRUE ){
     # Bounds
@@ -38,10 +38,10 @@ Convert_length_to_age_samples = function(K, Linf, L0, Lcv, Lbin_mat, AgeComp_lt,
   K_l2a = K_l2a / outer(rep(1,nrow(K_l2a)),colSums(K_l2a))
 
   # Calculate
-  AgeComp_at = K_l2a %*% AgeComp_lt
+  AgeComp_at = K_l2a %*% LengthComp_lt
 
   # Return
-  Return = list("AgeComp_lt"=AgeComp_at, "ALK_la")
+  Return = list("AgeComp_lt"=AgeComp_at)
   return( Return )
 }
 

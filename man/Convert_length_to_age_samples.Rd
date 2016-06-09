@@ -4,7 +4,7 @@
 \alias{Convert_length_to_age_samples}
 \title{Convert length-composition to age-composition data}
 \usage{
-Convert_length_to_age_samples(K, Linf, L0, Lcv, Lbin_mat, AgeComp_lt,
+Convert_length_to_age_samples(K, Linf, L0, Lcv, Lbin_mat, LengthComp_lt,
   checkforbugs = TRUE)
 }
 \arguments{
@@ -18,7 +18,7 @@ Convert_length_to_age_samples(K, Linf, L0, Lcv, Lbin_mat, AgeComp_lt,
 
 \item{Lbin_mat,}{a matrix with two columns, where each row specifies the lower and upper length for a given length bin (the lowest should be -Inf, and highest Inf)}
 
-\item{AgeComp_lt,}{a matrix of length-composition data, where columns are samples in year t, and cells are the count of samples with a given length and year}
+\item{LengthComp_lt,}{a matrix of length-composition data, where columns are samples in year t, and cells are the count of samples with a given length and year}
 
 \item{checkforbugs,}{a boolean stating whether to check for bugs or not}
 }
