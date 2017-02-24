@@ -31,6 +31,6 @@ Further reading
 =============
 
 For more details regarding development and testing of this delta-GLMM software please see:
-* Thorson, J.T., and Cope, J.M. In press. Catch curve stock-reduction analysis: an alternative solution to the catch equation. Fish. Res.
-* Thorson, J.T., and Prager, M.H. 2011. Better catch curves: Incorporating age-specific natural mortality and logistic selectivity. Trans. Am. Fish. Soc. 140: 356�366. 
+* Thorson, J.T., and Cope, J.M. 2015. Catch curve stock-reduction analysis: an alternative solution to the catch equation. Fish. Res. 171: 33–41. http://www.sciencedirect.com/science/article/pii/S0165783614001507
+* Thorson, J.T., and Prager, M.H. 2011. Better catch curves: Incorporating age-specific natural mortality and logistic selectivity. Trans. Am. Fish. Soc. 140: 356–366. 
 
