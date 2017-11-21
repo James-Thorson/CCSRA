@@ -66,7 +66,7 @@ AgeMax = 20
 Nyears = 20
 Ncomp_per_year = 100
 SurveyCV = 0.4
-MethodSet = c("CC", "CCSRA", "SRA", "AS" )[2] # 1: Catch curve; 2: CC-SRA; 3:DB-SRA; 4: Age-structured 
+MethodSet = c("CC", "CCSRA", "SRA", "AS" )[4] # 1: Catch curve; 2: CC-SRA; 3:DB-SRA; 4: Age-structured
                                 # Slow=Periodic (high-steepness, late-maturity, high survival) "red snapper" from fishbase
 # Biological parameters         # Fast=Opportunistic (low-steepness, early maturity, low survival) "Pacific sardine" from fishbase
 SpeciesType = 1 # 1=Slow; 2=Fast

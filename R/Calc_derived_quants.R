@@ -9,11 +9,16 @@
 
 
 
-Calc_derived_quants = function( Obj ){
+Calc_derived_quants = function( Obj, SD=NULL ){
   # Extract elements
+  if( length(Obj$env$random)>0 ){
+    par = Obj$env$last.par[-Obj$env$random]
+  }else{
+    par = Obj$env$last.par
+  }
   Data = Obj$env$data
-  ParHat = Obj$env$parList()
   Report = Obj$report()
+  ParHat = Obj$env$parList(par)
 
   # Total biomass
   TB_t = as.vector( Data$W_a %*% Report$N_at )
@@ -30,7 +35,8 @@ Calc_derived_quants = function( Obj ){
     # Modify parameters
     ParHat_new = ParHat
     ParHat_new[["ln_F_t_input"]] = rep( log(Fmean+1e-10), Data_new[["Nyears"]])
-    ParHat_new[["RecDev_hat"]] = rep(0, Data_new[["Nyears"]]+Data_new[["AgeMax"]])
+    if("RecDev_hat"%in%names(ParHat)) ParHat_new[["RecDev_hat"]] = rep(0, Data_new[["Nyears"]]+Data_new[["AgeMax"]])
+    if("Rec_par"%in%names(ParHat)) ParHat_new[["Rec_par"]] = rep(0, Data_new[["Nyears"]]+Data_new[["AgeMax"]])
     Obj_new = MakeADFun(data=Data_new, parameters=ParHat_new, inner.control=list(maxit=1e3) )
     # Extract and return stuff
     Report_new = Obj_new$report()
@@ -49,7 +55,22 @@ Calc_derived_quants = function( Obj ){
   TB0 = rev(as.vector(Data$W_a %*% Report_0$N_at))[1]
   SB0 = rev(Report_0$SB_t)[1]
 
+  # Bundle
+  Return = list("Fmsy"=Fmsy, "SB0"=SB0, "TB0"=TB0, "TB_t"=TB_t, "D_t"=Report$D_t, "SB_t"=Report$SB_t, "MSY"=MSY, "TBmsy"=TBmsy, "SBmsy"=SBmsy)
+
+  # Add standard errors if available
+  if( !is.null(SD) ){
+    Summ = summary(SD)
+    if( "Est. (bias.correct)" %in% colnames(Summ)){
+      Summ[,'Estimate'] = ifelse( is.na(Summ[,'Est. (bias.correct)']), Summ[,'Estimate'], Summ[,'Est. (bias.correct)'] )
+    }
+    Return$ln_D_t = Summ[ which(rownames(Summ)=="ln_D_t"), ]
+    Return$ln_SB_t = Summ[ which(rownames(Summ)=="ln_SB_t"), ]
+    Return$D_t = Summ[ which(rownames(Summ)=="D_t"), ]
+    Return$SB_t = Summ[ which(rownames(Summ)=="SB_t"), ]
+    Return$Rec_t = Summ[ which(rownames(Summ)=="Rec_t"), ]
+  }
+
   # Return
-  Return = list("Fmsy"=Fmsy, "SB0"=SB0, "TB0"=TB0, "TB_t"=TB_t, "SB_t"=Report$SB_t, "MSY"=MSY, "TBmsy"=TBmsy, "SBmsy"=SBmsy)
   return( Return )
 }
