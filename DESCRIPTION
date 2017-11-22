@@ -1,9 +1,17 @@
 Package: CCSRA
 Type: Package
 Title: Catch-curve stock reduction analysis for assessment of data-poor fisheries with compositional data in the final year
-Version: 1.0
-Date: 2014-10-30
-Author: James Thorson
+Version: 1.1.0
+Date: 2017-11-22
+Authors@R: person("James","Thorson", email="James.Thorson@noaa.gov", role=c("aut","cre"))
 Maintainer: James Thorson <James.Thorson@noaa.gov>
 Description: This package provides a software implementation of Catch-curve stock reduction analysis (CCSRA) using Template Model Builder (TMB) for parameter estimation
-License: What license is it under?
+Imports:
+    TMB,
+    MatrixModels,  
+    TMBhelper
+Depends:
+    R (>= 3.1.0),
+Remotes:
+    kaskr/TMB_contrib_R/TMBhelper
+License: GPL-3
