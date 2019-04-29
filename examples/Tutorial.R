@@ -35,10 +35,12 @@ setwd("C:/Users/James.Thorson/Desktop/")
 #install.packages("devtools")
 library("devtools")
 install_github("James-Thorson/CCSRA")
+install_github("James-Thorson/FishLife")
 
 # Libraries
 library(CCSRA)
 library(TMB)
+library(FishLife)
 
 # File structure
 TmbFile = paste0(system.file("executables", package="CCSRA"),"/")
@@ -51,7 +53,7 @@ FigFile = paste0(DateFile,"Figs/")
   dir.create(FigFile)
 
 # Compile model
-Version = "CCSRA_v5"   # v3: Added priors on h and M; v4: Added RecDevs; v5: fixed bug in steepness bounding
+Version = "CCSRA_v7"   # v3: Added priors on h and M; v4: Added RecDevs; v5: fixed bug in steepness bounding
 setwd(TmbFile)
 #dyn.unload( paste0(Version,".dll") )
 #file.remove( paste(Version,c(".dll",".o"),sep="") )
@@ -66,21 +68,24 @@ AgeMax = 20
 Nyears = 20
 Ncomp_per_year = 100
 SurveyCV = 0.4
-MethodSet = c("CC", "CCSRA", "SRA", "AS" )[2] # 1: Catch curve; 2: CC-SRA; 3:DB-SRA; 4: Age-structured 
+MethodSet = c("CC", "CCSRA", "SRA", "AS" )[4] # 1: Catch curve; 2: CC-SRA; 3:DB-SRA; 4: Age-structured
                                 # Slow=Periodic (high-steepness, late-maturity, high survival) "red snapper" from fishbase
 # Biological parameters         # Fast=Opportunistic (low-steepness, early maturity, low survival) "Pacific sardine" from fishbase
-SpeciesType = 1 # 1=Slow; 2=Fast
-K = c(0.1, 0.2)[SpeciesType]        # Slow: K=0.1; Fast: K=0.2
-Linf = c(60, 30)[SpeciesType]       # Slow: Linf=60; Fast: Linf=30
-LMASS = c(2, 1)[SpeciesType] # log-maximum annual spawners per spawner ; Slow: LMASS=2 (h=0.83); Fast: LMASS=1 (h=0.65)
+LH = Plot_taxa( Search_species(Genus="Lutjanus",Species="campechanus",add_ancestors=FALSE)$match_taxonomy, mfrow=c(2,2) )
+K = exp(LH[[1]]$Mean_pred[["K"]])
+Linf = exp(LH[[1]]$Mean_pred[["Loo"]])
+Amat = exp(LH[[1]]$Mean_pred[["tm"]])
+M = exp(LH[[1]]$Mean_pred[["M"]])
 L0 = 1
-Amat = log( 3*(Linf-L0)/Linf ) / K
-S50 = Amat
-Sslope = 1
 W_alpha = 0.01
 W_beta = 3.04
 R0 = 1e9
 SigmaR = 0.4
+LMASS = 2
+
+# Selectivity parameters
+S50 = Amat
+Sslope = 1
 
 # Effort dynamics  parameters
 Fequil = 0.25
@@ -89,7 +94,6 @@ F1 = 0.1
 SigmaF = 0.2
 
 # Derived
-M = 1.84 * K
 L_a = Linf - (Linf - L0) * exp(-K*0:AgeMax)
 W_a = W_alpha * L_a^W_beta      # In grams
 S_a = 1 / (1 + exp( -Sslope * (0:AgeMax - S50) ))
@@ -104,8 +108,7 @@ SBPR0 = SB0 / R0
 #######################
 
 # Which model?
-MethodI = 1
-Method = MethodSet[MethodI]
+Method = MethodSet[1]
 
 # Simulation settings
 F_method = switch(Method, "CC"=-1, "CCSRA"=1, "SRA"=1, "AS"=1) # 1: Explicit F; 2: Hybrid (not implemented)
@@ -160,25 +163,9 @@ for(LoopI in 1:2){
   Lwr = rep(-Inf, length(Obj$par))
   
   # Run
-  Opt = nlminb( start=Obj$par, objective=Obj$fn, gradient=Obj$gr, upper=Upr, lower=Lwr, control=list(trace=1, eval.max=1e4, iter.max=1e4, rel.tol=1e-10) )
-  Opt[["final_gradient"]] = Obj$gr( Opt$par )
-  
-  # Re-fit 
-  for(i in 1:10){
-    if( abs(min(Opt[["final_gradient"]]))>0.1 | Opt$message=="false convergence (8)" ){
-      # changes
-      InputList$Map = c(InputList$Map, list("ln_SigmaR"=factor(NA)))
-      InputList$Random = c( InputList$Random, c("S50","Sslope") )
-      Obj <- MakeADFun(data=InputList[['Data']], parameters=InputList[['Parameters']], map=InputList[['Map']], random=InputList[['Random']], inner.control=list(maxit=1e3) )
-      Opt = nlminb( start=Obj$env$last.par.best[-Obj$env$random]+rnorm(length(Obj$par)), objective=Obj$fn, gradient=Obj$gr, upper=Upr, lower=Lwr, control=list(trace=1, eval.max=1e4, iter.max=1e4, rel.tol=1e-10) )
-    }else{
-      break()
-    }
-    Opt[["final_gradient"]] = Obj$gr( Opt$par )
-  }
-  
+  Opt = TMBhelper::Optimize( obj=Obj$par, upper=Upr, getsd=TRUE )
+
   # Standard errors
-  Report = Obj$report()
   Sdreport = try( sdreport(Obj) )
   ParList = Obj$env$parList( Opt$par )
 
