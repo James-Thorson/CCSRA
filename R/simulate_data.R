@@ -1,4 +1,9 @@
-SimData_Fn <-
+#' Simulate data for fitting CCSRA
+#'
+#' \code{simulate_data} simulates data for use in testing CCSRA
+#'
+#' @export
+simulate_data <-
 function( F_method, Nyears, AgeMax, SigmaR, M, F1, W_a, S_a, Mat_a, h, SB0,
   Frate, Fequil, SigmaF, Fdynamics="Endogenous", Fmax=NA, Ncomp_per_year, SurveyCV,
   Recruitment_dynamics="Stationary", Regime_multiplier=NA ){
