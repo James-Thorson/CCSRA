@@ -123,24 +123,10 @@ matplot( cbind(DataList[['SB_t']]/SB0,DataList[['F_t']],DataList[['Cw_t']]/max(D
 # Estimate model
 #######################
 
-# Which model?
-MethodSet = c("CC", "CCSRA", "SRA", "AS", "ASSP" )[5] # 1: Catch curve; 2: CC-SRA; 3:DB-SRA; 4: Age-structured
+# estimation settings
+Method = c("CC", "CCSRA", "SRA", "AS", "ASSP" )[2] # 1: Catch curve; 2: CC-SRA; 3:DB-SRA; 4: Age-structured
 use_dirmult = TRUE
 estimate_recdevs = TRUE
-Method = MethodSet[1]
-
-# Exclude all age-comp except for final year for catch curve and CCSRA
-if( Method %in% c("CC","CCSRA") ){
-  DataList[['AgeComp_at']][,1:(Nyears-1)] = 0
-}
-# Exclude all age-comps for SRA and age-structured production model
-if( Method %in% c("SRA","ASSP") ){
-  DataList[['AgeComp_at']][] = 0
-}
-# Turn off index except for age-structured model
-if( Method %in% c("CC","CCSRA","SRA") ){
-  DataList[['Index_t']][,1] = NA
-}
 
 # Fit twice for bias adjustment if estimating recruitment deviations
 for(LoopI in 1:2){
@@ -167,7 +153,7 @@ for(LoopI in 1:2){
   dyn.load( paste0(TmbFile,dynlib(Version)) )
   if(LoopI==1) Obj <- MakeADFun(data=InputList[['Data']], parameters=InputList[['Parameters']], map=InputList[['Map']], random=InputList[['Random']] )
   if(LoopI==2) Obj <- MakeADFun(data=InputList[['Data']], parameters=ParList, map=InputList[['Map']], random=InputList[['Random']] )
-  #Obj$env$beSilent()
+  Obj$env$beSilent()
   InitVal = Obj$fn( Obj$par )
   
   # Check for bad start

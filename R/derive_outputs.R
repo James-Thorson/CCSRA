@@ -4,8 +4,10 @@
 #' \code{derive_outputs} calculates derived quanties for status or productivity
 #'
 #' @param Obj, the fitted TMB object
-
+#'
 #' @return List, a tagged list of potentially useful benchmarks
+#'
+#' @export
 derive_outputs = function( Obj, SD=NULL ){
   # Extract elements
   if( length(Obj$env$random)>0 ){

@@ -11,7 +11,7 @@ function( Version="CCSRA_v8", Method, M_prior, h_prior, D_prior, SigmaR_prior, S
   Cw_t, W_a, Mat_a, RecDev_biasadj, F_method, rec_method="dev", estimate_recdevs=TRUE, use_dirmult=FALSE ){
   
   # Generate defaults
-  if( is.missing(F_method) ){
+  if( missing(F_method) ){
     F_method = switch(Method, "CC"=-1, "CCSRA"=1, "SRA"=1, "AS"=1, "ASSP"=1 ) # 1: Explicit F; 2: Hybrid (not implemented)
   }
 
@@ -42,7 +42,7 @@ function( Version="CCSRA_v8", Method, M_prior, h_prior, D_prior, SigmaR_prior, S
   }
 
   # Override defaults
-  if( Method %in% c("SRA","ASSP") & use_dirmult==TRUE ){
+  if( Method %in% c("SRA","ASSP","CC") & use_dirmult==TRUE ){
     message("Over-riding inputs to set `use_dirmult=FALSE` given choice of `Method`")
     use_dirmult = FALSE
   }
@@ -147,6 +147,24 @@ function( Version="CCSRA_v8", Method, M_prior, h_prior, D_prior, SigmaR_prior, S
     Map[["ln_SigmaR"]] = factor(NA)
     Parameters[["ln_SigmaR"]] = log(0.001)
   }
+
+  ################
+  # Drop data for models that dont use it
+  ################
+
+  # Exclude all age-comp except for final year for catch curve and CCSRA
+  if( Method %in% c("CC","CCSRA") ){
+    Data[['AgeComp_at']][,1:(Nyears-1)] = 0
+  }
+  # Exclude all age-comps for SRA and age-structured production model
+  if( Method %in% c("SRA","ASSP") ){
+    Data[['AgeComp_at']][] = 0
+  }
+  # Turn off index except for age-structured model and age-structured production model
+  if( Method %in% c("CC","CCSRA","SRA") ){
+    Data[['Index_t']][,1] = NA
+  }
+
 
   # Input
   InputList = list("Data"=Data, "Parameters"=Parameters, "Random"=Random, "Map"=Map)

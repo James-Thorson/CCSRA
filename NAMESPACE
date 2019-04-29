@@ -3,6 +3,7 @@
 export(Calc_derived_quants)
 export(FormatInput_Fn)
 export(SimData_Fn)
+export(derive_outputs)
 export(make_inputs)
 export(plot_fit)
 export(simulate_data)
