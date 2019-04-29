@@ -1,12 +1,12 @@
 
 #' Calculate biological reference points
 #'
-#' \code{derive_results} calculates derived quanties for status or productivity
+#' \code{derive_outputs} calculates derived quanties for status or productivity
 #'
 #' @param Obj, the fitted TMB object
 
 #' @return List, a tagged list of potentially useful benchmarks
-derive_results = function( Obj, SD=NULL ){
+derive_outputs = function( Obj, SD=NULL ){
   # Extract elements
   if( length(Obj$env$random)>0 ){
     par = Obj$env$last.par[-Obj$env$random]

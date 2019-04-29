@@ -35,14 +35,14 @@ setwd("D:/UW Hideaway (SyncBackFree)/Teaching/Data weighting/")
 # Install package
 #install.packages("devtools")
 library("devtools")
-install_github("James-Thorson/CCSRA")
+install_github("James-Thorson/CCSRA", ref="dev")
 install_github("James-Thorson/FishLife")
 
 # Libraries
 library(CCSRA)
 library(TMB)
 library(FishLife)
-source( "C:/Users/James.Thorson/Desktop/Git/CCSRA/R/FormatInput_Fn.R" )
+#source( "C:/Users/James.Thorson/Desktop/Git/CCSRA/R/FormatInput_Fn.R" )
 
 # File structure
 #TmbFile = paste0(system.file("executables", package="CCSRA"),"/")
@@ -73,6 +73,7 @@ Ncomp_per_year = 100
 SurveyCV = 0.4
 MethodSet = c("CC", "CCSRA", "SRA", "AS" )[4] # 1: Catch curve; 2: CC-SRA; 3:DB-SRA; 4: Age-structured
 use_dirmult = TRUE
+estimate_recdevs = TRUE
 
 # Biological parameters
 # Slow=Periodic (high-steepness, late-maturity, high survival) "red snapper" from fishbase
@@ -120,7 +121,7 @@ Method = MethodSet[1]
 F_method = switch(Method, "CC"=-1, "CCSRA"=1, "SRA"=1, "AS"=1) # 1: Explicit F; 2: Hybrid (not implemented)
 
 # Simulate data
-DataList = SimData_Fn( F_method=F_method, Nyears=Nyears, AgeMax=AgeMax, SigmaR=SigmaR, M=M, F1=F1, W_a=W_a,
+DataList = simulate_data( F_method=F_method, Nyears=Nyears, AgeMax=AgeMax, SigmaR=SigmaR, M=M, F1=F1, W_a=W_a,
   S_a=S_a, Mat_a=Mat_a, h=h, SB0=SB0, Frate=Frate, Fequil=Fequil, SigmaF=SigmaF, Ncomp_per_year=Ncomp_per_year,
   SurveyCV=SurveyCV )
 # Exclude all age-comp except for final year, except for age-structured model
@@ -138,16 +139,19 @@ matplot( cbind(DataList[['SB_t']]/SB0,DataList[['F_t']],DataList[['Cw_t']]/max(D
 
 # Fit twice for bias adjustment if estimating recruitment deviations
 for(LoopI in 1:2){
+
   # Bias adjustment for each loop
-  if(LoopI==2 && !("condition" %in% names(attributes(Sdreport))) ){
+  if( LoopI==1 ){
+    RecDev_biasadj = rep(1, Nyears+AgeMax)
+  }
+  if( LoopI==2 ){
     SD = summary(Sdreport)      
     RecDev_biasadj = 1 - SD[which(rownames(SD)=="RecDev_hat"),'Std. Error']^2 / Report$SigmaR^2
-  }else{
-    RecDev_biasadj = rep(1, Nyears+AgeMax)
-  } 
+  }
 
   # Format inputs
-  InputList = FormatInput_Fn(Method=Method, M_prior=c(M,0.5), h_prior=c(h,0.1), Sslope_prior=c(1,1,1), use_dirmult=use_dirmult,
+  InputList = make_inputs( use_dirmult=use_dirmult, estimate_recdevs=estimate_recdevs,
+    Method=Method, M_prior=c(M,0.5), h_prior=c(h,0.1), Sslope_prior=c(1,1,1),
     D_prior=c(0.4,0.2), SigmaR_prior=c(0.6,0.2), AgeComp_at=DataList[['AgeComp_at']], Index_t=DataList[['Index_t']],
     Cw_t=DataList[['Cw_t']], W_a=W_a, Mat_a=Mat_a, RecDev_biasadj=RecDev_biasadj)
   
@@ -156,9 +160,9 @@ for(LoopI in 1:2){
 
   # Compile 
   dyn.load( paste0(TmbFile,dynlib(Version)) )
-  if(LoopI==1) Obj <- MakeADFun(data=InputList[['Data']], parameters=InputList[['Parameters']], map=InputList[['Map']], random=InputList[['Random']], inner.control=list(maxit=1e3) )
-  if(LoopI==2) Obj <- MakeADFun(data=InputList[['Data']], parameters=ParList, map=InputList[['Map']], random=InputList[['Random']], inner.control=list(maxit=1e3) )
-  Obj$env$beSilent()
+  if(LoopI==1) Obj <- MakeADFun(data=InputList[['Data']], parameters=InputList[['Parameters']], map=InputList[['Map']], random=InputList[['Random']] )
+  if(LoopI==2) Obj <- MakeADFun(data=InputList[['Data']], parameters=ParList, map=InputList[['Map']], random=InputList[['Random']] )
+  #Obj$env$beSilent()
   InitVal = Obj$fn( Obj$par )
   
   # Check for bad start
@@ -168,14 +172,13 @@ for(LoopI in 1:2){
   }
   
   # Set bounds
-  Obj$env$inner.control <- c(Obj$env$inner.control, "step.tol"=c(1e-8,1e-12)[1], "tol10"=c(1e-6,1e-8)[1], "grad.tol"=c(1e-8,1e-12)[1]) 
   Upr = rep(Inf, length(Obj$par))
     Upr[match("ln_SigmaR",names(Obj$par))] = log(2)
     Upr[match("ln_F_t_input",names(Obj$par))] = log(2)
     Upr[match("Sslope",names(Obj$par))] = log(5)
     Upr[match("S50",names(Obj$par))] = AgeMax*1.5
   Lwr = rep(-Inf, length(Obj$par))
-  
+
   # Run
   Opt = TMBhelper::Optimize( obj=Obj, upper=Upr, getsd=TRUE, newtonsteps=1, control=list(eval.max=10000, iter.max=10000, trace=1) )
 
@@ -184,7 +187,8 @@ for(LoopI in 1:2){
   Report = Obj$report()
 
   # Derived quantities
-  Derived = Calc_derived_quants( Obj )
+  Derived = derive_outputs( Obj )
+  plot_fit( Obj, plotdir=FigFile )
 
   # Compare effective, input, and true sample size
   cbind( "True"=colSums(DataList[['AgeComp_at']]), "Input"=colSums(InputList$Data$AgeComp_at), "Est"=Report$n_effective )

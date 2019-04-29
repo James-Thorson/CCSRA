@@ -8,7 +8,7 @@
 #' @export
 make_inputs <-
 function( Version="CCSRA_v8", Method, M_prior, h_prior, D_prior, SigmaR_prior, Sslope_prior=c(-999,999,1), AgeComp_at, Index_t,
-  Cw_t, W_a, Mat_a, RecDev_biasadj, rec_method="dev", use_dirmult=FALSE ){
+  Cw_t, W_a, Mat_a, RecDev_biasadj, rec_method="dev", estimate_recdevs=TRUE, use_dirmult=FALSE ){
   
   # Calculate derived stuff
   Nyears = ncol(AgeComp_at)
@@ -31,6 +31,9 @@ function( Version="CCSRA_v8", Method, M_prior, h_prior, D_prior, SigmaR_prior, S
   if(rec_method=="dev") RecDev_prior[4] = 1
   if(rec_method=="ln_R0_ratio") RecDev_prior[4] = 2
 
+  # Check for problems
+  if(estimate_recdevs==FALSE & rec_method!="dev") stop("Must use rec-dev parameterization to turn them off")
+
   # Compile TMB inputs -- Data
   CatchCV = 0.01
   if(Version %in% c("CCSRA_v8")){
@@ -45,9 +48,21 @@ function( Version="CCSRA_v8", Method, M_prior, h_prior, D_prior, SigmaR_prior, S
   }
 
   # Compile TMB inputs -- Parameters
-  if(Version %in% c("CCSRA_v8")) Parameters = list( "ln_R0"=ln_R0_prior[3], "ln_M"=log(M_prior[3]), "input_h"=qlogis((h_prior[3]-0.2)/0.8), "S50"=S50_prior[3], "Sslope"=Sslope_prior[3], "ln_SigmaR"=log(SigmaR_prior[4]), "ln_theta"=log(3), "Survey_par"=c(0,log(0.0001)), "ln_F_t_input"=log(rep(0.1,Nyears)), "Rec_par"=rep(0,AgeMax+Nyears))
-  if(Version %in% c("CCSRA_v7")) Parameters = list( "ln_R0"=ln_R0_prior[3], "ln_M"=log(M_prior[3]), "input_h"=qlogis((h_prior[3]-0.2)/0.8), "S50"=S50_prior[3], "Sslope"=Sslope_prior[3], "ln_SigmaR"=log(SigmaR_prior[4]), "Survey_par"=c(0,log(0.0001)), "ln_F_t_input"=log(rep(0.1,Nyears)), "Rec_par"=rep(0,AgeMax+Nyears))
-  if(Version %in% c("CCSRA_v6","CCSRA_v5","CCSRA_v4")) Parameters = list( "ln_R0"=ln_R0_prior[3], "ln_M"=log(M_prior[3]), "input_h"=qlogis((h_prior[3]-0.2)/0.8), "S50"=S50_prior[3], "Sslope"=Sslope_prior[3], "ln_SigmaR"=log(SigmaR_prior[4]), "Survey_par"=c(0,log(0.0001)), "ln_F_t_input"=log(rep(0.1,Nyears)), "RecDev_hat"=rep(0,AgeMax+Nyears))
+  if(Version %in% c("CCSRA_v8")){
+    Parameters = list( "ln_R0"=ln_R0_prior[3], "ln_M"=log(M_prior[3]), "input_h"=qlogis((h_prior[3]-0.2)/0.8), "S50"=S50_prior[3],
+      "Sslope"=Sslope_prior[3], "ln_SigmaR"=log(SigmaR_prior[4]), "ln_theta"=log(3), "Survey_par"=c(0,log(0.0001)),
+      "ln_F_t_input"=log(rep(0.1,Nyears)), "Rec_par"=rep(0,AgeMax+Nyears))
+  }
+  if(Version %in% c("CCSRA_v7")){
+    Parameters = list( "ln_R0"=ln_R0_prior[3], "ln_M"=log(M_prior[3]), "input_h"=qlogis((h_prior[3]-0.2)/0.8), "S50"=S50_prior[3],
+      "Sslope"=Sslope_prior[3], "ln_SigmaR"=log(SigmaR_prior[4]), "Survey_par"=c(0,log(0.0001)),
+      "ln_F_t_input"=log(rep(0.1,Nyears)), "Rec_par"=rep(0,AgeMax+Nyears))
+  }
+  if(Version %in% c("CCSRA_v6","CCSRA_v5","CCSRA_v4")){
+    Parameters = list( "ln_R0"=ln_R0_prior[3], "ln_M"=log(M_prior[3]), "input_h"=qlogis((h_prior[3]-0.2)/0.8), "S50"=S50_prior[3],
+      "Sslope"=Sslope_prior[3], "ln_SigmaR"=log(SigmaR_prior[4]), "Survey_par"=c(0,log(0.0001)), "ln_F_t_input"=log(rep(0.1,Nyears)),
+      "RecDev_hat"=rep(0,AgeMax+Nyears))
+  }
 
   # Compile TMB inputs -- Turn off parameters      
   Map = list()
@@ -81,6 +96,11 @@ function( Version="CCSRA_v8", Method, M_prior, h_prior, D_prior, SigmaR_prior, S
     Map[["Survey_par"]] = factor( c(1,NA) )
   }
 
+  # Map off theta if not using Dirichlet-multinomial
+  if( use_dirmult==FALSE ){
+    Map[["ln_theta"]] = factor(NA)
+  }
+
   # declare random
   Random = NULL
   if(Method=="SRA"){
@@ -100,6 +120,19 @@ function( Version="CCSRA_v8", Method, M_prior, h_prior, D_prior, SigmaR_prior, S
   }
   if( "Rec_par" %in% names(Parameters) ){
     Random = union(Random, "Rec_par")
+  }
+
+  # Turn off rec-devs
+  if( estimate_recdevs==FALSE ){
+    Random = setdiff(Random, c("RecDev_hat","Rec_par") )
+    if("Rec_par" %in% names(Parameters)){
+      Map[["Rec_par"]] = factor( rep(NA,length(Parameters$Rec_par)) )
+    }
+    if("RecDev_hat" %in% names(Parameters)){
+      Map[["RecDev_hat"]] = factor( rep(NA,length(Parameters$RecDev_hat)) )
+    }
+    Map[["ln_SigmaR"]] = factor(NA)
+    Parameters[["ln_SigmaR"]] = log(0.001)
   }
 
   # Input
