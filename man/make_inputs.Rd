@@ -7,7 +7,7 @@
 make_inputs(Version = "CCSRA_v8", Method, M_prior, h_prior, D_prior,
   SigmaR_prior, Sslope_prior = c(-999, 999, 1), AgeComp_at, Index_t,
   Cw_t, W_a, Mat_a, RecDev_biasadj, rec_method = "dev",
-  use_dirmult = FALSE)
+  estimate_recdevs = TRUE, use_dirmult = FALSE)
 }
 \value{
 a list with inputs for building CCSRA TMB object
