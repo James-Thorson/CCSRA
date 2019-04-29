@@ -8,8 +8,13 @@
 #' @export
 make_inputs <-
 function( Version="CCSRA_v8", Method, M_prior, h_prior, D_prior, SigmaR_prior, Sslope_prior=c(-999,999,1), AgeComp_at, Index_t,
-  Cw_t, W_a, Mat_a, RecDev_biasadj, rec_method="dev", estimate_recdevs=TRUE, use_dirmult=FALSE ){
+  Cw_t, W_a, Mat_a, RecDev_biasadj, F_method, rec_method="dev", estimate_recdevs=TRUE, use_dirmult=FALSE ){
   
+  # Generate defaults
+  if( is.missing(F_method) ){
+    F_method = switch(Method, "CC"=-1, "CCSRA"=1, "SRA"=1, "AS"=1, "ASSP"=1 ) # 1: Explicit F; 2: Hybrid (not implemented)
+  }
+
   # Calculate derived stuff
   Nyears = ncol(AgeComp_at)
   MaxAge = nrow(AgeComp_at)-1 # includes age 0
@@ -32,7 +37,15 @@ function( Version="CCSRA_v8", Method, M_prior, h_prior, D_prior, SigmaR_prior, S
   if(rec_method=="ln_R0_ratio") RecDev_prior[4] = 2
 
   # Check for problems
-  if(estimate_recdevs==FALSE & rec_method!="dev") stop("Must use rec-dev parameterization to turn them off")
+  if( estimate_recdevs==FALSE & rec_method!="dev" ){
+    stop("Must use rec-dev parameterization to turn them off")
+  }
+
+  # Override defaults
+  if( Method %in% c("SRA","ASSP") & use_dirmult==TRUE ){
+    message("Over-riding inputs to set `use_dirmult=FALSE` given choice of `Method`")
+    use_dirmult = FALSE
+  }
 
   # Compile TMB inputs -- Data
   CatchCV = 0.01

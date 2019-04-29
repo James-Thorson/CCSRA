@@ -71,9 +71,6 @@ AgeMax = 20
 Nyears = 20
 Ncomp_per_year = 100
 SurveyCV = 0.4
-MethodSet = c("CC", "CCSRA", "SRA", "AS" )[4] # 1: Catch curve; 2: CC-SRA; 3:DB-SRA; 4: Age-structured
-use_dirmult = TRUE
-estimate_recdevs = TRUE
 
 # Biological parameters
 # Slow=Periodic (high-steepness, late-maturity, high survival) "red snapper" from fishbase
@@ -114,21 +111,10 @@ SBPR0 = SB0 / R0
 # Simulate data
 #######################
 
-# Which model?
-Method = MethodSet[1]
-
-# Simulation settings
-F_method = switch(Method, "CC"=-1, "CCSRA"=1, "SRA"=1, "AS"=1) # 1: Explicit F; 2: Hybrid (not implemented)
-
 # Simulate data
-DataList = simulate_data( F_method=F_method, Nyears=Nyears, AgeMax=AgeMax, SigmaR=SigmaR, M=M, F1=F1, W_a=W_a,
+DataList = simulate_data( Nyears=Nyears, AgeMax=AgeMax, SigmaR=SigmaR, M=M, F1=F1, W_a=W_a,
   S_a=S_a, Mat_a=Mat_a, h=h, SB0=SB0, Frate=Frate, Fequil=Fequil, SigmaF=SigmaF, Ncomp_per_year=Ncomp_per_year,
   SurveyCV=SurveyCV )
-# Exclude all age-comp except for final year, except for age-structured model
-if( Method%in%c("CC","CCSRA") ) DataList[['AgeComp_at']][,1:(Nyears-1)] = 0
-if( Method=="SRA" ) DataList[['AgeComp_at']][] = 0
-# Turn off index except for age-structured model
-if( Method%in%c("CC","CCSRA","SRA") ) DataList[['Index_t']][,1] = NA
 
 # Plot time series
 matplot( cbind(DataList[['SB_t']]/SB0,DataList[['F_t']],DataList[['Cw_t']]/max(DataList[['Cw_t']])), type="l", col=c("black","red","blue"), lty="solid")
@@ -136,6 +122,25 @@ matplot( cbind(DataList[['SB_t']]/SB0,DataList[['F_t']],DataList[['Cw_t']]/max(D
 #######################
 # Estimate model
 #######################
+
+# Which model?
+MethodSet = c("CC", "CCSRA", "SRA", "AS", "ASSP" )[5] # 1: Catch curve; 2: CC-SRA; 3:DB-SRA; 4: Age-structured
+use_dirmult = TRUE
+estimate_recdevs = TRUE
+Method = MethodSet[1]
+
+# Exclude all age-comp except for final year for catch curve and CCSRA
+if( Method %in% c("CC","CCSRA") ){
+  DataList[['AgeComp_at']][,1:(Nyears-1)] = 0
+}
+# Exclude all age-comps for SRA and age-structured production model
+if( Method %in% c("SRA","ASSP") ){
+  DataList[['AgeComp_at']][] = 0
+}
+# Turn off index except for age-structured model
+if( Method %in% c("CC","CCSRA","SRA") ){
+  DataList[['Index_t']][,1] = NA
+}
 
 # Fit twice for bias adjustment if estimating recruitment deviations
 for(LoopI in 1:2){
