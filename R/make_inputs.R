@@ -1,6 +1,14 @@
-FormatInput_Fn <-
-function( Version="CCSRA_v7", Method, M_prior, h_prior, D_prior, SigmaR_prior, Sslope_prior=c(-999,999,1), AgeComp_at, Index_t,
-  Cw_t, W_a, Mat_a, RecDev_biasadj, rec_method="dev" ){
+
+#' Build inputs for CCSRA
+#'
+#' \code{make_inputs} builds inputs necessary for running CCSRA
+#'
+#' @return a list with inputs for building CCSRA TMB object
+#'
+#' @export
+make_inputs <-
+function( Version="CCSRA_v8", Method, M_prior, h_prior, D_prior, SigmaR_prior, Sslope_prior=c(-999,999,1), AgeComp_at, Index_t,
+  Cw_t, W_a, Mat_a, RecDev_biasadj, rec_method="dev", use_dirmult=FALSE ){
   
   # Calculate derived stuff
   Nyears = ncol(AgeComp_at)
@@ -25,11 +33,19 @@ function( Version="CCSRA_v7", Method, M_prior, h_prior, D_prior, SigmaR_prior, S
 
   # Compile TMB inputs -- Data
   CatchCV = 0.01
-  Data = list("Nyears"=Nyears, "AgeMax"=AgeMax, "F_method"=F_method, "CatchCV"=CatchCV, "ln_R0_prior"=ln_R0_prior, "M_prior"=M_prior, "h_prior"=h_prior, 
+  if(Version %in% c("CCSRA_v8")){
+    Data = list("Nyears"=Nyears, "AgeMax"=AgeMax, "F_method"=F_method, "use_dirmult"=use_dirmult, "CatchCV"=CatchCV, "ln_R0_prior"=ln_R0_prior, "M_prior"=M_prior, "h_prior"=h_prior,
+            "S50_prior"=S50_prior, "Sslope_prior"=Sslope_prior, "F_t_prior"=F_t_prior, "D_prior"=D_prior, "SigmaR_prior"=SigmaR_prior,
+            "RecDev_prior"=RecDev_prior, "RecDev_biasadj"=RecDev_biasadj, "Cw_t"=Cw_t, "W_a"=W_a, "Mat_a"=Mat_a, "AgeComp_at"=AgeComp_at, "Index_t"=Index_t)
+  }
+  if(Version %in% c("CCSRA_v7","CCSRA_v6","CCSRA_v5","CCSRA_v4")){
+    Data = list("Nyears"=Nyears, "AgeMax"=AgeMax, "F_method"=F_method, "CatchCV"=CatchCV, "ln_R0_prior"=ln_R0_prior, "M_prior"=M_prior, "h_prior"=h_prior,
             "S50_prior"=S50_prior, "Sslope_prior"=Sslope_prior, "F_t_prior"=F_t_prior, "D_prior"=D_prior, "SigmaR_prior"=SigmaR_prior, 
             "RecDev_prior"=RecDev_prior, "RecDev_biasadj"=RecDev_biasadj, "Cw_t"=Cw_t, "W_a"=W_a, "Mat_a"=Mat_a, "AgeComp_at"=AgeComp_at, "Index_t"=Index_t)
+  }
 
   # Compile TMB inputs -- Parameters
+  if(Version %in% c("CCSRA_v8")) Parameters = list( "ln_R0"=ln_R0_prior[3], "ln_M"=log(M_prior[3]), "input_h"=qlogis((h_prior[3]-0.2)/0.8), "S50"=S50_prior[3], "Sslope"=Sslope_prior[3], "ln_SigmaR"=log(SigmaR_prior[4]), "ln_theta"=log(3), "Survey_par"=c(0,log(0.0001)), "ln_F_t_input"=log(rep(0.1,Nyears)), "Rec_par"=rep(0,AgeMax+Nyears))
   if(Version %in% c("CCSRA_v7")) Parameters = list( "ln_R0"=ln_R0_prior[3], "ln_M"=log(M_prior[3]), "input_h"=qlogis((h_prior[3]-0.2)/0.8), "S50"=S50_prior[3], "Sslope"=Sslope_prior[3], "ln_SigmaR"=log(SigmaR_prior[4]), "Survey_par"=c(0,log(0.0001)), "ln_F_t_input"=log(rep(0.1,Nyears)), "Rec_par"=rep(0,AgeMax+Nyears))
   if(Version %in% c("CCSRA_v6","CCSRA_v5","CCSRA_v4")) Parameters = list( "ln_R0"=ln_R0_prior[3], "ln_M"=log(M_prior[3]), "input_h"=qlogis((h_prior[3]-0.2)/0.8), "S50"=S50_prior[3], "Sslope"=Sslope_prior[3], "ln_SigmaR"=log(SigmaR_prior[4]), "Survey_par"=c(0,log(0.0001)), "ln_F_t_input"=log(rep(0.1,Nyears)), "RecDev_hat"=rep(0,AgeMax+Nyears))
 

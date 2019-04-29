@@ -6,6 +6,7 @@ Type objective_function<Type>::operator() ()
   DATA_INTEGER(Nyears);          
   DATA_INTEGER(AgeMax);
   DATA_INTEGER(F_method); // F_method=1: Explicit F; F_method=2: Hybrid method (not implemented)
+  DATA_INTEGER(use_dirmult);
   DATA_SCALAR( CatchCV );
   DATA_VECTOR( ln_R0_prior );   // 
   DATA_VECTOR( M_prior);
@@ -31,6 +32,7 @@ Type objective_function<Type>::operator() ()
   PARAMETER( S50 );
   PARAMETER( Sslope );
   PARAMETER( ln_SigmaR );
+  PARAMETER( ln_theta );
   PARAMETER_VECTOR( Survey_par );
   PARAMETER_VECTOR( ln_F_t_input );
   PARAMETER_VECTOR( Rec_par );
@@ -71,14 +73,16 @@ Type objective_function<Type>::operator() ()
   // Slot 5:  Priors
   jnll_comp.setZero();
   vector<Type> jnll0_t(Nyears);
-  Type pi = 3.141592;
-  Type infinity = 1.0 / 0.0;
-  
+  vector<Type> n_samp(Nyears);
+  vector<Type> n_effective(Nyears);
+  n_effective.setZero();
+
   // Transform parameters
   Type survey_q = exp( Survey_par(0) );
   Type survey_extrasd = exp( Survey_par(1) );
   Type M = exp( ln_M );
   Type h = 0.2001 + 0.7998*1/(1+exp(-input_h));
+  Type theta = exp( ln_theta );
   Type SigmaR = exp( ln_SigmaR );
   Type R0 = exp( ln_R0 );
   Type SBPR0 = 0;
@@ -104,7 +108,7 @@ Type objective_function<Type>::operator() ()
   // Calculate F for Pope's approximation
   if(F_method==2){ 
     tmp_sum = 0;
-    for(int AgeI=0; AgeI<=AgeMax; AgeI++) tmp_sum += S_a(AgeI) * W_a(AgeI) * N_at(AgeI,0); 
+    for(int AgeI=0; AgeI<=AgeMax; AgeI++) tmp_sum += S_a(AgeI) * W_a(AgeI) * N_at(AgeI,0);
     F_t(0) += Cw_t(0) / (exp(-M/2) * tmp_sum);
     Joint = 1 / (1 + exp( Type(30) * (F_t(0)-Type(0.95)) ));
     F_t(0) =  Joint*F_t(0) + (1-Joint)*0.95;
@@ -215,13 +219,33 @@ Type objective_function<Type>::operator() ()
   }
   
   // Objective function -- compositional data
-  for(int AgeI=0; AgeI<=AgeMax; AgeI++){  
   for(int YearI=0; YearI<Nyears; YearI++){
     tmp_sum = 0;
-    for(int AgeII=0; AgeII<=AgeMax; AgeII++) tmp_sum += Cn_at(AgeII,YearI);
-    jnll_comp(2) -= AgeComp_at(AgeI,YearI) * log( Cn_at(AgeI,YearI)/tmp_sum*0.9999 + 0.0001/(AgeMax+1) );
-  }}
-  
+    n_samp(YearI) = 0;
+    for(int AgeI=0; AgeI<=AgeMax; AgeI++){
+      tmp_sum += Cn_at(AgeI,YearI);
+      n_samp(YearI) += AgeComp_at(AgeI,YearI);
+    }
+    if( n_samp(YearI)>0 ){
+      if( use_dirmult==0 ){
+        // Multinomial
+        for(int AgeI=0; AgeI<=AgeMax; AgeI++){
+          jnll_comp(2) -= AgeComp_at(AgeI,YearI) * log( Cn_at(AgeI,YearI)/tmp_sum*0.9999 + 0.0001/(AgeMax+1) );
+        }
+        n_effective(YearI) = n_samp(YearI);
+      }else{
+        // dirichlet-multinomial
+        jnll_comp(2) -= lgamma( n_samp(YearI)*theta );
+        jnll_comp(2) += lgamma( n_samp(YearI) + n_samp(YearI)*theta );
+        for(int AgeI=0; AgeI<=AgeMax; AgeI++){
+          jnll_comp(2) -= lgamma( AgeComp_at(AgeI,YearI) + theta*n_samp(YearI)*(Cn_at(AgeI,YearI)/tmp_sum*0.9999 + 0.0001/(AgeMax+1)) );
+          jnll_comp(2) += lgamma( theta*n_samp(YearI)*(Cn_at(AgeI,YearI)/tmp_sum*0.9999 + 0.0001/(AgeMax+1)) );
+        }
+        n_effective(YearI) = 1/(1+theta) + n_samp(YearI)*(theta/(1+theta));
+      }
+    }
+  }
+
   // RecDevs
   for(int Index=0; Index<(Nyears+AgeMax); Index++){
     if( SigmaR>0 ) jnll_comp(3) -= dnorm( RecDev_hat(Index), Type(0), SigmaR, true);
@@ -292,6 +316,7 @@ Type objective_function<Type>::operator() ()
   REPORT( CatchCV );
   REPORT( Cn_at );
   REPORT( Rec_t );
+  REPORT( n_effective );
 
   //ADREPORT(S_a);
   ADREPORT(Param_hat);

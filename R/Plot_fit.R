@@ -1,3 +1,8 @@
+#' Plot results
+#'
+#' \code{plot_fit} plots results
+#'
+#' @export
 plot_fit = function( Obj, plotdir=getwd() ){
   Report = Obj$report()
   Data = Obj$env$data

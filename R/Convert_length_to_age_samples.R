@@ -1,7 +1,7 @@
 
 #' Convert length-composition to age-composition data
 #'
-#' \code{Convert_length_to_age_samples} converts a matrix of length-composition data to age-composition data for use in CCSRA
+#' \code{convert_length_to_age_samples} converts a matrix of length-composition data to age-composition data for use in CCSRA
 #'
 #' @param K, Brody growth coefficient
 #' @param Linf, Asymptotic maximum length
@@ -13,7 +13,7 @@
 
 #' @return AgeComp_at, a matrix of expected age-composition data, where columns are samples in year t, and cells are the count of samples with a given age and year
 
-Convert_length_to_age_samples = function(K, Linf, L0, Lcv, Lbin_mat, LengthComp_lt, checkforbugs=TRUE){
+convert_length_to_age_samples = function(K, Linf, L0, Lcv, Lbin_mat, LengthComp_lt, checkforbugs=TRUE){
   # warnings
   if( checkforbugs==TRUE ){
     # Bounds
