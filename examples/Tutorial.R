@@ -33,20 +33,17 @@ setwd("D:/UW Hideaway (SyncBackFree)/Teaching/Data weighting/")
 #######################
 
 # Install package
-#install.packages("devtools")
-library("devtools")
-install_github("James-Thorson/CCSRA", ref="dev")
-install_github("James-Thorson/FishLife")
+devtools::install_github("James-Thorson/CCSRA", ref="dev")
+devtools::install_github("James-Thorson/FishLife")
+devtools::install_github("James-Thorson/FishStatsUtils")
 
 # Libraries
 library(CCSRA)
 library(TMB)
 library(FishLife)
-#source( "C:/Users/James.Thorson/Desktop/Git/CCSRA/R/FormatInput_Fn.R" )
 
 # File structure
-#TmbFile = paste0(system.file("executables", package="CCSRA"),"/")
-TmbFile = "C:/Users/James.Thorson/Desktop/Git/CCSRA/inst/executables/"
+TmbFile = paste0(system.file("executables", package="CCSRA"),"/")
 
 # Date file
 Date = paste0(Sys.Date(),"b")
@@ -56,21 +53,17 @@ FigFile = paste0(DateFile,"Figs/")
   dir.create(FigFile)
 
 # Compile model
-Version = "CCSRA_v8"   # v3: Added priors on h and M; v4: Added RecDevs; v5: fixed bug in steepness bounding
+Version = FishStatsUtils::get_latest_version( package="CCSRA" )
 setwd(TmbFile)
-#dyn.unload( paste0(Version,".dll") )
-#file.remove( paste(Version,c(".dll",".o"),sep="") )
 compile( paste0(Version,".cpp") )
 
 #######################
-# Settings
+# Biological and economic settings
 #######################
 
 # General
 AgeMax = 20
 Nyears = 20
-Ncomp_per_year = 100
-SurveyCV = 0.4
 
 # Biological parameters
 # Slow=Periodic (high-steepness, late-maturity, high survival) "red snapper" from fishbase
@@ -111,6 +104,10 @@ SBPR0 = SB0 / R0
 # Simulate data
 #######################
 
+# Data settings
+Ncomp_per_year = 100
+SurveyCV = 0.4
+
 # Simulate data
 DataList = simulate_data( Nyears=Nyears, AgeMax=AgeMax, SigmaR=SigmaR, M=M, F1=F1, W_a=W_a,
   S_a=S_a, Mat_a=Mat_a, h=h, SB0=SB0, Frate=Frate, Fequil=Fequil, SigmaF=SigmaF, Ncomp_per_year=Ncomp_per_year,
@@ -124,11 +121,12 @@ matplot( cbind(DataList[['SB_t']]/SB0,DataList[['F_t']],DataList[['Cw_t']]/max(D
 #######################
 
 # estimation settings
-Method = c("CC", "CCSRA", "SRA", "AS", "ASSP" )[2] # 1: Catch curve; 2: CC-SRA; 3:DB-SRA; 4: Age-structured
+Method = c("CC", "CCSRA", "SRA", "AS", "ASSP" )[4] # 1: Catch curve; 2: CC-SRA; 3:DB-SRA; 4: Age-structured
 use_dirmult = TRUE
 estimate_recdevs = TRUE
 
 # Fit twice for bias adjustment if estimating recruitment deviations
+LoopI = 1
 for(LoopI in 1:2){
 
   # Bias adjustment for each loop
@@ -136,7 +134,7 @@ for(LoopI in 1:2){
     RecDev_biasadj = rep(1, Nyears+AgeMax)
   }
   if( LoopI==2 ){
-    SD = summary(Sdreport)      
+    SD = summary(Opt$SD)
     RecDev_biasadj = 1 - SD[which(rownames(SD)=="RecDev_hat"),'Std. Error']^2 / Report$SigmaR^2
   }
 
@@ -147,6 +145,7 @@ for(LoopI in 1:2){
     Cw_t=DataList[['Cw_t']], W_a=W_a, Mat_a=Mat_a, RecDev_biasadj=RecDev_biasadj)
   
   # Intentionally inflate input sample size
+  # ONLY DO THIS IF EXPLORING EFFECTIVE OF MIS-WEIGHTING COMP DATA
   InputList$Data$AgeComp_at = InputList$Data$AgeComp_at * 2
 
   # Compile 
