@@ -4,10 +4,10 @@
 \alias{simulate_data}
 \title{Simulate data for fitting CCSRA}
 \usage{
-simulate_data(F_method, Nyears, AgeMax, SigmaR, M, F1, W_a, S_a, Mat_a, h,
-  SB0, Frate, Fequil, SigmaF, Fdynamics = "Endogenous", Fmax = NA,
-  Ncomp_per_year, SurveyCV, Recruitment_dynamics = "Stationary",
-  Regime_multiplier = NA)
+simulate_data(Nyears, AgeMax, SigmaR, M, F1, W_a, S_a, Mat_a, h, SB0,
+  Frate, Fequil, SigmaF, F_method = 1, Fdynamics = "Endogenous",
+  Fmax = NA, Ncomp_per_year, SurveyCV,
+  Recruitment_dynamics = "Stationary", Regime_multiplier = NA)
 }
 \description{
 \code{simulate_data} simulates data for use in testing CCSRA

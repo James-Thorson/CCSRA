@@ -4,8 +4,8 @@
 #'
 #' @export
 simulate_data <-
-function( F_method, Nyears, AgeMax, SigmaR, M, F1, W_a, S_a, Mat_a, h, SB0,
-  Frate, Fequil, SigmaF, Fdynamics="Endogenous", Fmax=NA, Ncomp_per_year, SurveyCV,
+function( Nyears, AgeMax, SigmaR, M, F1, W_a, S_a, Mat_a, h, SB0,
+  Frate, Fequil, SigmaF, F_method=1, Fdynamics="Endogenous", Fmax=NA, Ncomp_per_year, SurveyCV,
   Recruitment_dynamics="Stationary", Regime_multiplier=NA ){
 
   # Data objects
