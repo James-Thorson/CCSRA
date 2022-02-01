@@ -63,11 +63,11 @@ derive_outputs = function( Obj, SD=NULL ){
     if( "Est. (bias.correct)" %in% colnames(Summ)){
       Summ[,'Estimate'] = ifelse( is.na(Summ[,'Est. (bias.correct)']), Summ[,'Estimate'], Summ[,'Est. (bias.correct)'] )
     }
-    Return$ln_D_t = Summ[ which(rownames(Summ)=="ln_D_t"), ]
-    Return$ln_SB_t = Summ[ which(rownames(Summ)=="ln_SB_t"), ]
-    Return$D_t = Summ[ which(rownames(Summ)=="D_t"), ]
-    Return$SB_t = Summ[ which(rownames(Summ)=="SB_t"), ]
-    Return$Rec_t = Summ[ which(rownames(Summ)=="Rec_t"), ]
+    Return$ln_D_t = Summ[ which(rownames(Summ)=="ln_D_t"), "Estimate"]
+    Return$ln_SB_t = Summ[ which(rownames(Summ)=="ln_SB_t"), "Estimate"]
+    Return$D_t = Summ[ which(rownames(Summ)=="D_t"), "Estimate"]
+    Return$SB_t = Summ[ which(rownames(Summ)=="SB_t"), "Estimate"]
+    Return$Rec_t = Summ[ which(rownames(Summ)=="Rec_t"), "Estimate"]
   }
 
   # Return
