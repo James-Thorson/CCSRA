@@ -3,6 +3,14 @@
 #'
 #' \code{make_inputs} builds inputs necessary for running CCSRA
 #'
+#' @param composition_likelihood Integer specifying the likelihood for compositional data, from the available options below:
+#' \describe{
+#'   \item{\code{composition_likelihood=0}}{Multinomial}
+#'   \item{\code{composition_likelihood=1}}{Dirichlet-multinomial using linear parameterization}
+#'   \item{\code{composition_likelihood=2}}{Multivariate-Tweedie using fixed power parameter \code{p = 1.2}}
+#'   \item{\code{composition_likelihood=3}}{Multivariate-Tweedie estimating both parameters phi and p}
+#' }
+#'
 #' @return a list with inputs for building CCSRA TMB object
 #'
 #' @export

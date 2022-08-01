@@ -3,7 +3,6 @@
 \docType{package}
 \name{CCSRA}
 \alias{CCSRA}
-\alias{CCSRA-package}
 \title{Catch curve stock reduction analysis}
 \description{
 CCSRA is an age-structured stock assessment modelling package built in TMB

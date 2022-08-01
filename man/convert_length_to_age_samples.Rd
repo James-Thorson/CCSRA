@@ -4,8 +4,15 @@
 \alias{convert_length_to_age_samples}
 \title{Convert length-composition to age-composition data}
 \usage{
-convert_length_to_age_samples(K, Linf, L0, Lcv, Lbin_mat, LengthComp_lt,
-  checkforbugs = TRUE)
+convert_length_to_age_samples(
+  K,
+  Linf,
+  L0,
+  Lcv,
+  Lbin_mat,
+  LengthComp_lt,
+  checkforbugs = TRUE
+)
 }
 \arguments{
 \item{K, }{Brody growth coefficient}

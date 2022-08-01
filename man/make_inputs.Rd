@@ -4,10 +4,34 @@
 \alias{make_inputs}
 \title{Build inputs for CCSRA}
 \usage{
-make_inputs(Version = "CCSRA_v8", Method, M_prior, h_prior, D_prior,
-  SigmaR_prior, Sslope_prior = c(-999, 999, 1), AgeComp_at, Index_t,
-  Cw_t, W_a, Mat_a, RecDev_biasadj, F_method, rec_method = "dev",
-  estimate_recdevs = TRUE, use_dirmult = FALSE)
+make_inputs(
+  Version = "CCSRA_v9",
+  Method,
+  M_prior,
+  h_prior,
+  D_prior,
+  SigmaR_prior,
+  Sslope_prior = c(-999, 999, 1),
+  AgeComp_at,
+  Index_t,
+  Cw_t,
+  W_a,
+  Mat_a,
+  RecDev_biasadj,
+  F_method,
+  rec_method = "dev",
+  estimate_recdevs = TRUE,
+  composition_likelihood = 0
+)
+}
+\arguments{
+\item{composition_likelihood}{Integer specifying the likelihood for compositional data, from the available options below:
+\describe{
+  \item{\code{composition_likelihood=0}}{Multinomial}
+  \item{\code{composition_likelihood=1}}{Dirichlet-multinomial using linear parameterization}
+  \item{\code{composition_likelihood=2}}{Multivariate-Tweedie using fixed power parameter \code{p = 1.2}}
+  \item{\code{composition_likelihood=3}}{Multivariate-Tweedie estimating both parameters phi and p}
+}}
 }
 \value{
 a list with inputs for building CCSRA TMB object

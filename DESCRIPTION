@@ -2,7 +2,7 @@ Package: CCSRA
 Type: Package
 Title: Catch-curve stock reduction analysis for assessment of data-poor fisheries with compositional data in the final year
 Version: 1.2.0
-Date: 2021-12-21
+Date: 2022-08-01
 Authors@R: 
 	person(given = "James",
              family = "Thorson",
@@ -21,4 +21,4 @@ Depends:
 Remotes:
     kaskr/TMB_contrib_R/TMBhelper
 License: GPL-3
-RoxygenNote: 6.1.0
+RoxygenNote: 7.2.0
