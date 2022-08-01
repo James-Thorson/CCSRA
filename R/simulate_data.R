@@ -4,9 +4,30 @@
 #'
 #' @export
 simulate_data <-
-function( Nyears, AgeMax, SigmaR, M, F1, W_a, S_a, Mat_a, h, SB0,
-  Frate, Fequil, SigmaF, F_method=1, Fdynamics="Endogenous", Fmax=NA, Ncomp_per_year, SurveyCV,
-  Recruitment_dynamics="Stationary", Regime_multiplier=NA, SigmaS=0, rhoA=0.8, rhoT=0.8 ){
+function( Nyears,
+          AgeMax,
+          SigmaR,
+          M,
+          F1,
+          W_a,
+          S_a,
+          Mat_a,
+          h,
+          SB0,
+          R0,
+          Frate,
+          Fequil,
+          SigmaF,
+          F_method = 1,
+          Fdynamics = "Endogenous",
+          Fmax = NA,
+          Ncomp_per_year,
+          SurveyCV,
+          Recruitment_dynamics = "Stationary",
+          Regime_multiplier = NA,
+          SigmaS = 0,
+          rhoA = 0.8,
+          rhoT = 0.8 ){
 
   # Data objects
   Cw_t = SB_t = F_t = Bexploit_t = rep(NA, Nyears)

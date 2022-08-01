@@ -3,12 +3,35 @@
 #'
 #' \code{make_inputs} builds inputs necessary for running CCSRA
 #'
+#' @param composition_likelihood Integer specifying the likelihood for compositional data, from the available options below:
+#' \describe{
+#'   \item{\code{composition_likelihood=0}}{Multinomial}
+#'   \item{\code{composition_likelihood=1}}{Dirichlet-multinomial using linear parameterization}
+#'   \item{\code{composition_likelihood=2}}{Multivariate-Tweedie using fixed power parameter \code{p = 1.2}}
+#'   \item{\code{composition_likelihood=3}}{Multivariate-Tweedie estimating both parameters phi and p}
+#' }
+#'
 #' @return a list with inputs for building CCSRA TMB object
 #'
 #' @export
 make_inputs <-
-function( Version="CCSRA_v8", Method, M_prior, h_prior, D_prior, SigmaR_prior, Sslope_prior=c(-999,999,1), AgeComp_at, Index_t,
-  Cw_t, W_a, Mat_a, RecDev_biasadj, F_method, rec_method="dev", estimate_recdevs=TRUE, use_dirmult=FALSE ){
+function( Version = "CCSRA_v9",
+          Method,
+          M_prior,
+          h_prior,
+          D_prior,
+          SigmaR_prior,
+          Sslope_prior = c(-999,999,1),
+          AgeComp_at,
+          Index_t,
+          Cw_t,
+          W_a,
+          Mat_a,
+          RecDev_biasadj,
+          F_method,
+          rec_method = "dev",
+          estimate_recdevs = TRUE,
+          composition_likelihood = 0 ){
   
   # Generate defaults
   if( missing(F_method) ){
@@ -42,15 +65,21 @@ function( Version="CCSRA_v8", Method, M_prior, h_prior, D_prior, SigmaR_prior, S
   }
 
   # Override defaults
-  if( Method %in% c("SRA","ASSP","CC") & use_dirmult==TRUE ){
-    message("Over-riding inputs to set `use_dirmult=FALSE` given choice of `Method`")
-    use_dirmult = FALSE
+  if( Method %in% c("SRA","ASSP","CC") & composition_likelihood!=0 ){
+    message("Over-riding inputs to set `composition_likelihood=0` given choice of `Method`")
+    composition_likelihood = 0
   }
 
   # Compile TMB inputs -- Data
   CatchCV = 0.01
+  if(Version %in% c("CCSRA_v9")){
+    Data = list("Nyears"=Nyears, "AgeMax"=AgeMax, "F_method"=F_method, "composition_likelihood"=composition_likelihood,
+            "CatchCV"=CatchCV, "ln_R0_prior"=ln_R0_prior, "M_prior"=M_prior, "h_prior"=h_prior,
+            "S50_prior"=S50_prior, "Sslope_prior"=Sslope_prior, "F_t_prior"=F_t_prior, "D_prior"=D_prior, "SigmaR_prior"=SigmaR_prior,
+            "RecDev_prior"=RecDev_prior, "RecDev_biasadj"=RecDev_biasadj, "Cw_t"=Cw_t, "W_a"=W_a, "Mat_a"=Mat_a, "AgeComp_at"=AgeComp_at, "Index_t"=Index_t)
+  }
   if(Version %in% c("CCSRA_v8")){
-    Data = list("Nyears"=Nyears, "AgeMax"=AgeMax, "F_method"=F_method, "use_dirmult"=use_dirmult, "CatchCV"=CatchCV, "ln_R0_prior"=ln_R0_prior, "M_prior"=M_prior, "h_prior"=h_prior,
+    Data = list("Nyears"=Nyears, "AgeMax"=AgeMax, "F_method"=F_method, "use_dirmult"=composition_likelihood, "CatchCV"=CatchCV, "ln_R0_prior"=ln_R0_prior, "M_prior"=M_prior, "h_prior"=h_prior,
             "S50_prior"=S50_prior, "Sslope_prior"=Sslope_prior, "F_t_prior"=F_t_prior, "D_prior"=D_prior, "SigmaR_prior"=SigmaR_prior,
             "RecDev_prior"=RecDev_prior, "RecDev_biasadj"=RecDev_biasadj, "Cw_t"=Cw_t, "W_a"=W_a, "Mat_a"=Mat_a, "AgeComp_at"=AgeComp_at, "Index_t"=Index_t)
   }
@@ -61,6 +90,11 @@ function( Version="CCSRA_v8", Method, M_prior, h_prior, D_prior, SigmaR_prior, S
   }
 
   # Compile TMB inputs -- Parameters
+  if(Version %in% c("CCSRA_v9")){
+    Parameters = list( "ln_R0"=ln_R0_prior[3], "ln_M"=log(M_prior[3]), "input_h"=qlogis((h_prior[3]-0.2)/0.8), "S50"=S50_prior[3],
+      "Sslope"=Sslope_prior[3], "ln_SigmaR"=log(SigmaR_prior[4]), "ln_theta"=log(3), "ln_phi"=0, "power_prime"=qlogis(1.2-1),
+      "Survey_par"=c(0,log(0.0001)), "ln_F_t_input"=log(rep(0.1,Nyears)), "Rec_par"=rep(0,AgeMax+Nyears))
+  }
   if(Version %in% c("CCSRA_v8")){
     Parameters = list( "ln_R0"=ln_R0_prior[3], "ln_M"=log(M_prior[3]), "input_h"=qlogis((h_prior[3]-0.2)/0.8), "S50"=S50_prior[3],
       "Sslope"=Sslope_prior[3], "ln_SigmaR"=log(SigmaR_prior[4]), "ln_theta"=log(3), "Survey_par"=c(0,log(0.0001)),
@@ -109,9 +143,22 @@ function( Version="CCSRA_v8", Method, M_prior, h_prior, D_prior, SigmaR_prior, S
     Map[["Survey_par"]] = factor( c(1,NA) )
   }
 
-  # Map off theta if not using Dirichlet-multinomial
-  if( use_dirmult==FALSE ){
-    Map[["ln_theta"]] = factor(NA)
+  # Map off overdispersion parameters
+  if( composition_likelihood == 0 ){
+    if("ln_theta" %in% names(Parameters)) Map[["ln_theta"]] = factor(NA)
+    if("ln_phi" %in% names(Parameters)) Map[["ln_phi"]] = factor(NA)
+    if("power_prime" %in% names(Parameters)) Map[["power_prime"]] = factor(NA)
+  }
+  if( composition_likelihood == 1 ){
+    if("ln_phi" %in% names(Parameters)) Map[["ln_phi"]] = factor(NA)
+    if("power_prime" %in% names(Parameters)) Map[["power_prime"]] = factor(NA)
+  }
+  if( composition_likelihood == 2 ){
+    if("ln_theta" %in% names(Parameters)) Map[["ln_theta"]] = factor(NA)
+    if("power_prime" %in% names(Parameters)) Map[["power_prime"]] = factor(NA)
+  }
+  if( composition_likelihood == 3 ){
+    if("ln_theta" %in% names(Parameters)) Map[["ln_theta"]] = factor(NA)
   }
 
   # declare random
