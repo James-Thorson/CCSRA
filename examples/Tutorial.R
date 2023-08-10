@@ -26,21 +26,20 @@
 ##############################
 
 #setwd("C:/Users/James.Thorson/Desktop/")
-setwd("D:/UW Hideaway (SyncBackFree)/Teaching/Data weighting/")
+setwd( R'(C:\Users\James.Thorson\Desktop\Work files\AFSC\2023-08 -- bias-ramp demo)' )
 
 #######################
 # Header
 #######################
 
 # Install package
-devtools::install_github("James-Thorson/CCSRA", ref="dev")
-devtools::install_github("James-Thorson/FishLife")
-devtools::install_github("James-Thorson/FishStatsUtils")
+#devtools::install_github("James-Thorson/CCSRA")
+#devtools::install_github("James-Thorson/FishStatsUtils")
 
 # Libraries
 library(CCSRA)
 library(TMB)
-library(FishLife)
+library(TMBhelper)
 
 # File structure
 TmbFile = paste0(system.file("executables", package="CCSRA"),"/")
@@ -53,7 +52,7 @@ FigFile = paste0(DateFile,"Figs/")
   dir.create(FigFile)
 
 # Compile model
-Version = FishStatsUtils::get_latest_version( package="CCSRA" )
+Version = "CCSRA_v9" # get_latest_version( package="CCSRA" )
 setwd(TmbFile)
 compile( paste0(Version,".cpp") )
 
@@ -68,11 +67,15 @@ Nyears = 20
 # Biological parameters
 # Slow=Periodic (high-steepness, late-maturity, high survival) "red snapper" from fishbase
 # Fast=Opportunistic (low-steepness, early maturity, low survival) "Pacific sardine" from fishbase
-LH = Plot_taxa( Search_species(Genus="Lutjanus",Species="campechanus",add_ancestors=FALSE)$match_taxonomy, mfrow=c(2,2) )
-K = exp(LH[[1]]$Mean_pred[["K"]])
-Linf = exp(LH[[1]]$Mean_pred[["Loo"]])
-Amat = exp(LH[[1]]$Mean_pred[["tm"]])
-M = exp(LH[[1]]$Mean_pred[["M"]])
+#LH = Plot_taxa( Search_species(Genus="Lutjanus",Species="campechanus",add_ancestors=FALSE)$match_taxonomy, mfrow=c(2,2) )
+#K = exp(LH[[1]]$Mean_pred[["K"]])
+#Linf = exp(LH[[1]]$Mean_pred[["Loo"]])
+#Amat = exp(LH[[1]]$Mean_pred[["tm"]])
+#M = exp(LH[[1]]$Mean_pred[["M"]])
+K = 0.18
+Linf = 90
+Amat = 16
+M = 0.25
 L0 = 1
 W_alpha = 0.01
 W_beta = 3.04
@@ -109,9 +112,22 @@ Ncomp_per_year = 100
 SurveyCV = 0.4
 
 # Simulate data
-DataList = simulate_data( Nyears=Nyears, AgeMax=AgeMax, SigmaR=SigmaR, M=M, F1=F1, W_a=W_a,
-  S_a=S_a, Mat_a=Mat_a, h=h, SB0=SB0, Frate=Frate, Fequil=Fequil, SigmaF=SigmaF, Ncomp_per_year=Ncomp_per_year,
-  SurveyCV=SurveyCV )
+DataList = simulate_data( Nyears = Nyears,
+                          AgeMax = AgeMax,
+                          SigmaR = SigmaR,
+                          M = M,
+                          F1 = F1,
+                          W_a = W_a,
+                          S_a = S_a,
+                          Mat_a = Mat_a,
+                          h = h,
+                          SB0 = SB0,
+                          Frate = Frate,
+                          Fequil = Fequil,
+                          SigmaF = SigmaF,
+                          Ncomp_per_year = Ncomp_per_year,
+                          SurveyCV = SurveyCV,
+                          R0 = R0 )
 
 # Plot time series
 matplot( cbind(DataList[['SB_t']]/SB0,DataList[['F_t']],DataList[['Cw_t']]/max(DataList[['Cw_t']])), type="l", col=c("black","red","blue"), lty="solid")
@@ -139,28 +155,38 @@ for(LoopI in 1:2){
   }
 
   # Format inputs
-  InputList = make_inputs( use_dirmult=use_dirmult, estimate_recdevs=estimate_recdevs,
-    Method=Method, M_prior=c(M,0.5), h_prior=c(h,0.1), Sslope_prior=c(1,1,1),
-    D_prior=c(0.4,0.2), SigmaR_prior=c(0.6,0.2), AgeComp_at=DataList[['AgeComp_at']], Index_t=DataList[['Index_t']],
-    Cw_t=DataList[['Cw_t']], W_a=W_a, Mat_a=Mat_a, RecDev_biasadj=RecDev_biasadj)
-  
+  InputList = make_inputs( estimate_recdevs = estimate_recdevs,
+                           Method = Method,
+                           composition_likelihood = 1,
+                           M_prior = c(M,0.5),
+                           h_prior = c(h,0.1),
+                           Sslope_prior = c(1,1,1),
+                           D_prior = c(0.4,0.2),
+                           SigmaR_prior = c(0.6,0.2),
+                           AgeComp_at = DataList[['AgeComp_at']],
+                           Index_t = DataList[['Index_t']],
+                           Cw_t = DataList[['Cw_t']],
+                           W_a = W_a,
+                           Mat_a = Mat_a,
+                           RecDev_biasadj = RecDev_biasadj )
+
   # Intentionally inflate input sample size
   # ONLY DO THIS IF EXPLORING EFFECTIVE OF MIS-WEIGHTING COMP DATA
   InputList$Data$AgeComp_at = InputList$Data$AgeComp_at * 2
 
-  # Compile 
+  # Compile
   dyn.load( paste0(TmbFile,dynlib(Version)) )
   if(LoopI==1) Obj <- MakeADFun(data=InputList[['Data']], parameters=InputList[['Parameters']], map=InputList[['Map']], random=InputList[['Random']] )
   if(LoopI==2) Obj <- MakeADFun(data=InputList[['Data']], parameters=ParList, map=InputList[['Map']], random=InputList[['Random']] )
   Obj$env$beSilent()
   InitVal = Obj$fn( Obj$par )
-  
+
   # Check for bad start
   if( is.nan(InitVal) & LoopI==2 ){
     Obj <- MakeADFun(data=InputList[['Data']], parameters=InputList[['Parameters']], map=InputList[['Map']], random=InputList[['Random']], inner.control=list(maxit=1e3) )
     InitVal = Obj$fn( Obj$par )
   }
-  
+
   # Set bounds
   Upr = rep(Inf, length(Obj$par))
     Upr[match("ln_SigmaR",names(Obj$par))] = log(2)
@@ -170,7 +196,12 @@ for(LoopI in 1:2){
   Lwr = rep(-Inf, length(Obj$par))
 
   # Run
-  Opt = TMBhelper::Optimize( obj=Obj, upper=Upr, getsd=TRUE, newtonsteps=1, control=list(eval.max=10000, iter.max=10000, trace=1) )
+  Opt = TMBhelper::fit_tmb( obj = Obj,
+                            upper = Upr,
+                            getsd = TRUE,
+                            newtonsteps = 1,
+                            control = list(eval.max=10000, iter.max=10000, trace=1),
+                            bias.correct = TRUE )
 
   # Standard errors
   ParList = Obj$env$parList( Opt$par )
